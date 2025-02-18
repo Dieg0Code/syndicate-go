@@ -9,7 +9,7 @@ import (
     "log"
     "time"
 
-    gomaky "github.com/Dieg0code/gokamy"
+    gokamy "github.com/Dieg0code/gokamy"
     openai "github.com/sashabaranov/go-openai"
     
     "gorm.io/driver/postgres"
@@ -66,7 +66,7 @@ func (m *ORMMemory) Clear() {
 
 // NewORMMemory returns a Memory interface backed by ORMMemory.
 // It auto-migrates the Message table using GORM.
-func NewORMMemory(db *gorm.DB) gomaky.Memory {
+func NewORMMemory(db *gorm.DB) gokamy.Memory {
     if err := db.AutoMigrate(&Message{}); err != nil {
         log.Fatalf("AutoMigrate failed: %v", err)
     }
@@ -92,7 +92,7 @@ func main() {
     client := openai.NewClient("YOUR_API_KEY")
 
     // Build the first agent (HelloAgent).
-    agentOne, err := gomaky.NewAgentBuilder().
+    agentOne, err := gokamy.NewAgentBuilder().
         SetClient(client).
         SetName("HelloAgent").
         SetSystemPrompt("You are an agent that warmly greets users and encourages further interaction.").
@@ -105,7 +105,7 @@ func main() {
     }
 
     // Build the second agent (FinalAgent).
-    agentTwo, err := gomaky.NewAgentBuilder().
+    agentTwo, err := gokamy.NewAgentBuilder().
         SetClient(client).
         SetName("FinalAgent").
         SetSystemPrompt("You are an agent that provides a final summary based on the conversation.").
@@ -118,7 +118,7 @@ func main() {
     }
 
     // Create an orchestrator, register both agents, and define the execution sequence.
-    orchestrator := gomaky.NewOrchestratorBuilder().
+    orchestrator := gokamy.NewOrchestratorBuilder().
         SetGlobalHistory(globalHistory).
         AddAgent(agentOne).
         AddAgent(agentTwo).

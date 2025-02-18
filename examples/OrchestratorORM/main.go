@@ -6,7 +6,7 @@ import (
 	"log"
 	"sync"
 
-	gomaky "github.com/Dieg0code/gokamy-ai"
+	gokamy "github.com/Dieg0Code/gokamy-ai"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -42,7 +42,7 @@ func (m *CustomMemory) Clear() {
 }
 
 // NewCustomMemory returns a new instance of Memory interface backed by CustomMemory.
-func NewCustomMemory() gomaky.Memory {
+func NewCustomMemory() gokamy.Memory {
 	return &CustomMemory{
 		messages: make([]openai.ChatCompletionMessage, 0),
 	}
@@ -56,7 +56,7 @@ func main() {
 	customMemory := NewCustomMemory()
 
 	// Build an agent that uses CustomMemory.
-	agent, err := gomaky.NewAgentBuilder().
+	agent, err := gokamy.NewAgentBuilder().
 		SetClient(client).
 		SetName("CustomMemoryAgent").
 		SetSystemPrompt("You are an agent that logs all messages to a custom memory implementation.").

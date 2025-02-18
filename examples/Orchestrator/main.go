@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	gomaky "github.com/Dieg0code/gokamy-ai"
+	gokamy "github.com/Dieg0Code/gokamy-ai"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -14,11 +14,11 @@ func main() {
 	client := openai.NewClient("YOUR_API_KEY")
 
 	// Create simple memory instances for each agent.
-	memoryAgentOne := gomaky.NewSimpleMemory()
-	memoryAgentTwo := gomaky.NewSimpleMemory()
+	memoryAgentOne := gokamy.NewSimpleMemory()
+	memoryAgentTwo := gokamy.NewSimpleMemory()
 
 	// Build the first agent (HelloAgent).
-	agentOne, err := gomaky.NewAgentBuilder().
+	agentOne, err := gokamy.NewAgentBuilder().
 		SetClient(client).
 		SetName("HelloAgent").
 		SetSystemPrompt("You are an agent that warmly greets users and encourages further interaction.").
@@ -31,7 +31,7 @@ func main() {
 	}
 
 	// Build the second agent (FinalAgent).
-	agentTwo, err := gomaky.NewAgentBuilder().
+	agentTwo, err := gokamy.NewAgentBuilder().
 		SetClient(client).
 		SetName("FinalAgent").
 		SetSystemPrompt("You are an agent that provides a final summary based on the conversation.").
@@ -44,7 +44,7 @@ func main() {
 	}
 
 	// Create an orchestrator, register both agents, and define the execution sequence.
-	orchestrator := gomaky.NewOrchestratorBuilder().
+	orchestrator := gokamy.NewOrchestratorBuilder().
 		AddAgent(agentOne).
 		AddAgent(agentTwo).
 		// Define the processing sequence: first HelloAgent, then FinalAgent.

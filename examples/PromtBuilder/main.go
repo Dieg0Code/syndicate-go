@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	llm "github.com/Dieg0code/gokamy-ai"
+	gokamy "github.com/Dieg0Code/gokamy-ai"
 )
 
 // User represents a user profile that might come from a database.
@@ -20,7 +20,7 @@ func main() {
 	currentTime := time.Now()
 
 	// Create a new prompt using both formatted and non-formatted functions
-	prompt := llm.NewPromptBuilder().
+	prompt := gokamy.NewPromptBuilder().
 		// Static "Rules" section
 		CreateSection("Rules").
 		AddText("Rules", "System-wide policies to follow:").

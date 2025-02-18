@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	gokamy "github.com/Dieg0code/gokamy-ai"
+	gokamy "github.com/Dieg0Code/gokamy-ai"
 	openai "github.com/sashabaranov/go-openai"
 )
 

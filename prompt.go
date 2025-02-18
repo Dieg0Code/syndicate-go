@@ -1,4 +1,4 @@
-package gomaky
+package gokamy
 
 import (
 	"encoding/json"
