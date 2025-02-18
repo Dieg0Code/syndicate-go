@@ -4,8 +4,7 @@
   <img src="https://i.imgur.com/fKAZo4d.png" alt="gokamy">
 </div>
 
-
-Built on top of the [sashabaranov/go-openai](https://github.com/sashabaranov/go-openai) library, Gokamy SDK is a lightweight, flexible, and extensible toolkit for building intelligent conversational agents. It enables you to create agents, engineer prompts, generate tool schemas, manage memory, and orchestrate complex workflows, making it easy to integrate advanced AI capabilities into your projects.
+Built on top of the [sashabaranov/go-openai](https://github.com/sashabaranov/go-openai) library, Gokamy SDK is a lightweight, flexible, and extensible toolkit for building intelligent conversational agents in Golang. It enables you to create agents, engineer prompts, generate tool schemas, manage memory, and orchestrate complex workflows—making it easy to integrate advanced AI capabilities into your projects.
 
 ## Features
 
@@ -27,7 +26,8 @@ go get github.com/Dieg0code/gokamy-ai
 
 Ensure that you have Go installed and configured in your development environment.
 
-## Quick Start
+<details open>
+  <summary><strong>Quick Start</strong></summary>
 
 Below is a simple example demonstrating how to create a haiku agent using the SDK:
 
@@ -85,8 +85,10 @@ func main() {
 	fmt.Println(response)
 }
 ```
+</details>
 
-## Orchestration Example
+<details>
+  <summary><strong>Orchestration Example</strong></summary>
 
 Gokamy SDK also provides an orchestrator to manage a sequence of agents. In the following example, two agents are created and executed in sequence:
 
@@ -155,8 +157,10 @@ func main() {
 	fmt.Println(response)
 }
 ```
+</details>
 
-## Tools
+<details>
+  <summary><strong>Tools</strong></summary>
 
 Gokamy SDK includes functionality to automatically generate JSON schemas from Go structures. These generated schemas can be used to define and validate tools for your agents.
 
@@ -197,14 +201,18 @@ func main() {
 ```
 
 The schema generation leverages reflection along with custom struct tags (e.g., description, required, enum) to produce a JSON Schema that describes the tool's expected input. This schema can then be used to interface with language models or validate user-provided data.
+</details>
 
-## Custom Memory Implementation
+<details>
+  <summary><strong>Custom Memory Implementation</strong></summary>
 
 In addition to the built-in SimpleMemory (an in-memory slice), Gokamy SDK allows you to create your own memory implementations. Simply ensure your implementation satisfies the `Memory` interface.
 
 Example of a custom memory implementation using GORM with PostgreSQL can be found in the OrchestratorORM example.
+</details>
 
-## Future CLI Support
+<details>
+  <summary><strong>Future CLI Support</strong></summary>
 
 The project is also planning a CLI tool to streamline project setup. The planned commands include:
 
@@ -212,6 +220,7 @@ The project is also planning a CLI tool to streamline project setup. The planned
 - **`gokamy new AgentName`**: Creates a new agent scaffold with placeholder files (e.g., AgentName.go, AgentNameTool.go, prompt.go).
 
 Stay tuned for further updates!
+</details>
 
 ## Contributing
 
