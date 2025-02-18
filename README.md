@@ -4,17 +4,17 @@
   <img src="https://i.imgur.com/fKAZo4d.png" alt="gokamy">
 </div>
 
-Built on top of the [sashabaranov/go-openai](https://github.com/sashabaranov/go-openai) library, Gokamy SDK is a lightweight, flexible, and extensible toolkit for building intelligent conversational agents in Golang. It enables you to create agents, engineer prompts, generate tool schemas, manage memory, and orchestrate complex workflows—making it easy to integrate advanced AI capabilities into your projects.
+Built on top of the [sashabaranov/go-openai](https://github.com/sashabaranov/go-openai) library, Gokamy SDK is a lightweight, flexible, and extensible toolkit for building intelligent conversational agents in Golang. It enables you to create agents, engineer prompts, generate tool schemas, manage memory, and orchestrate complex workflows—making it easy to integrate advanced AI capabilities into your projects. 🚀
 
 ## Features
 
-- **Agent Management:** Easily build and configure agents with custom system prompts, tools, and memory.
-- **Prompt Engineering:** Create structured prompts with nested sections for improved clarity.
-- **Tool Schemas:** Generate JSON schemas from Go structures to define tools and validate user inputs.
-- **Memory Implementations:** Use built-in SimpleMemory or implement your own memory storage that adheres to the Memory interface.
-- **Orchestrator:** Manage multiple agents and execute them in a predefined sequence to achieve complex workflows.
-- **Extendable:** The SDK is designed to be unopinionated, allowing seamless integration into your projects.
-- **CLI (Planned):** Future CLI support to initialize projects and scaffold agents with simple commands.
+- **Agent Management 🤖:** Easily build and configure agents with custom system prompts, tools, and memory.
+- **Prompt Engineering 📝:** Create structured prompts with nested sections for improved clarity.
+- **Tool Schemas 🔧:** Generate JSON schemas from Go structures to define tools and validate user inputs.
+- **Memory Implementations 🧠:** Use built-in SimpleMemory or implement your own memory storage that adheres to the Memory interface.
+- **Orchestrator 🎛️:** Manage multiple agents and execute them in a predefined sequence to achieve complex workflows.
+- **Extendable 🔌:** The SDK is designed to be unopinionated, allowing seamless integration into your projects.
+- **CLI (Planned) 🚀:** Future CLI support to initialize projects and scaffold agents with simple commands.
 
 ## Installation
 
