@@ -343,7 +343,79 @@ func main() {
     fmt.Println("Final Orchestrator Response:")
     fmt.Println(response)
 }
-````
+```
+</details>
+
+<details>
+  <summary><strong>Advanced Configuration: Temperature and JSON Response Format</strong></summary>
+
+
+You can configure the behavior of your agent by configuring parameters such as temperature and JSON response format. The following example demonstrates how to set these options using the AgentBuilder:
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	gokamy "github.com/Dieg0code/gokamy-ai"
+	openai "github.com/sashabaranov/go-openai"
+)
+
+// MyResponse defines the expected JSON structure of the response.
+type MyResponse struct {
+	Message string   `json:"message" description:"The response message from the agent" required:"true"`
+	Code    int      `json:"code" description:"The status code of the response" required:"true"`
+	Status  string   `json:"status" description:"The status of the operation" enum:"success,failure" required:"true"`
+	Details []string `json:"details" description:"Optional additional details about the response" required:"false"`
+}
+
+func main() {
+	// Initialize the OpenAI client with your API key.
+	client := openai.NewClient("YOUR_OPENAI_API_KEY")
+
+	// Create a simple memory instance.
+	memory := gokamy.NewSimpleMemory()
+
+	// Set a basic system prompt.
+	systemPrompt := "You are an advanced agent configured with custom settings. Please provide a JSON response following the expected format."
+
+	// Build the agent with custom temperature and JSON response format.
+	agent, err := gokamy.NewAgentBuilder().
+		SetClient(client).
+		SetName("AdvancedAgent").
+		SetSystemPrompt(systemPrompt).
+		SetMemory(memory).
+		SetModel(openai.GPT4).
+		SetMaxRecursion(2).
+		SetTemperature(0.7).                // Set the temperature to influence randomness.
+		SetJSONResponseFormat(MyResponse{}). // Set the expected JSON response format using tags.
+		Build()
+	if err != nil {
+		log.Fatalf("Error building agent: %v", err)
+	}
+
+	// Process a sample input with the agent.
+	response, err := agent.Process(context.Background(), "Provide a response in JSON format.")
+	if err != nil {
+		log.Fatalf("Error processing request: %v", err)
+	}
+
+	// Parse the JSON response into MyResponse struct.
+	var parsedResponse MyResponse
+	if err := json.Unmarshal([]byte(response), &parsedResponse); err != nil {
+		log.Fatalf("Error parsing JSON response: %v", err)
+	}
+
+	// Print the parsed response.
+	fmt.Println("Agent Response:")
+	fmt.Printf("Message: %s\n", parsedResponse.Message)
+	fmt.Printf("Code: %d\n", parsedResponse.Code)
+}
+
+```
 </details>
 
 <details>

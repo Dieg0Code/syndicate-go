@@ -303,10 +303,6 @@ func (b *AgentBuilder) SetTemperature(temperature float32) *AgentBuilder {
 	return b
 }
 
-func (b *AgentBuilder) SetResponseFormat(format *openai.ChatCompletionResponseFormat) *AgentBuilder {
-	b.responseFormat = format
-	return b
-}
 
 // AddTool adds a tool to the agent.
 func (b *AgentBuilder) AddTool(tool Tool) *AgentBuilder {
