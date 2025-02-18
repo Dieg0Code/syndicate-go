@@ -1,4 +1,4 @@
-module github.com/Dieg0code/gokamy-ai
+module github.com/Dieg0Code/gokamy-ai
 
 go 1.22.1
 
