@@ -1,6 +1,9 @@
 # Gokamy AI
 
-![gokamy](https://i.imgur.com/fKAZo4d.png)
+<div align="center">
+  <img src="https://i.imgur.com/fKAZo4d.png" alt="gokamy">
+</div>
+
 
 Built on top of the [sashabaranov/go-openai](https://github.com/sashabaranov/go-openai) library, Gokamy SDK is a lightweight, flexible, and extensible toolkit for building intelligent conversational agents. It enables you to create agents, engineer prompts, generate tool schemas, manage memory, and orchestrate complex workflows, making it easy to integrate advanced AI capabilities into your projects.
 
