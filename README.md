@@ -28,7 +28,7 @@ Built on top of the [sashabaranov/go-openai](https://github.com/sashabaranov/go-
 To install Gokamy SDK, use Go modules:
 
 ```bash
-go get github.com/Dieg0code/gokamy-ai
+go get github.com/Dieg0Code/gokamy-ai
 ```
 
 Ensure that you have Go installed and configured in your development environment.
