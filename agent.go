@@ -6,17 +6,41 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
 	openai "github.com/sashabaranov/go-openai"
 )
 
+const ChatMessageRoleDeveloper = "developer"
+
+// getSystemRole determina el rol para el prompt del sistema basado en el modelo.
+func getSystemRole(model string) string {
+	reasonerModels := []string{
+		openai.O1Mini,
+		openai.O1Mini20240912,
+		openai.O1Preview,
+		openai.O1Preview20240912,
+		openai.O1,
+		openai.O120241217,
+		openai.O3Mini,
+		openai.O3Mini20250131,
+	}
+
+	for _, m := range reasonerModels {
+		if strings.EqualFold(model, m) {
+			return ChatMessageRoleDeveloper
+		}
+	}
+	return openai.ChatMessageRoleSystem
+}
+
 // Agent interface defines the methods for processing inputs and managing tools.
 type Agent interface {
 	Process(ctx context.Context, input string, additionalMessages ...[]openai.ChatCompletionMessage) (string, error)
 	AddTool(tool Tool)
-	SetSystemPrompt(prompt string)
+	SetConfigPrompt(prompt string)
 	GetName() string
 }
 
@@ -57,8 +81,8 @@ func (b *BaseAgent) Process(ctx context.Context, input string, additionalMessage
 	return b.processWithDepth(ctx, input, 0, additionalMessages...)
 }
 
-// SetSystemPrompt sets the system prompt for the agent.
-func (b *BaseAgent) SetSystemPrompt(prompt string) {
+// SetConfigPrompt sets the configuration prompt for the agent.
+func (b *BaseAgent) SetConfigPrompt(prompt string) {
 	b.systemPrompt = prompt
 }
 
@@ -193,7 +217,7 @@ func (a *BaseAgent) prepareMessages() []openai.ChatCompletionMessage {
 	messages := []openai.ChatCompletionMessage{}
 	if a.systemPrompt != "" {
 		messages = append(messages, openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleSystem,
+			Role:    getSystemRole(a.model),
 			Content: a.systemPrompt,
 		})
 	}
@@ -274,8 +298,8 @@ func (b *AgentBuilder) SetName(name string) *AgentBuilder {
 	return b
 }
 
-// SetSystemPrompt sets the system prompt for the agent.
-func (b *AgentBuilder) SetSystemPrompt(prompt string) *AgentBuilder {
+// SetConfigPrompt sets the configuration prompt for the agent.
+func (b *AgentBuilder) SetConfigPrompt(prompt string) *AgentBuilder {
 	b.systemPrompt = prompt
 	return b
 }
@@ -302,7 +326,6 @@ func (b *AgentBuilder) SetTemperature(temperature float32) *AgentBuilder {
 	b.temperature = temperature
 	return b
 }
-
 
 // AddTool adds a tool to the agent.
 func (b *AgentBuilder) AddTool(tool Tool) *AgentBuilder {

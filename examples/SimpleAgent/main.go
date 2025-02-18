@@ -32,7 +32,7 @@ func main() {
 	agent, err := gokamy.NewAgentBuilder().
 		SetClient(client).
 		SetName("HaikuAgent").
-		SetSystemPrompt(systemPrompt).
+		SetConfigPrompt(systemPrompt).
 		SetMemory(memory).
 		SetModel(openai.GPT4).
 		SetMaxRecursion(2). // Prevent infinite loops in tool calls.

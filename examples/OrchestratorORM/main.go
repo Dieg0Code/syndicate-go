@@ -59,7 +59,7 @@ func main() {
 	agent, err := gokamy.NewAgentBuilder().
 		SetClient(client).
 		SetName("CustomMemoryAgent").
-		SetSystemPrompt("You are an agent that logs all messages to a custom memory implementation.").
+		SetConfigPrompt("You are an agent that logs all messages to a custom memory implementation.").
 		SetMemory(customMemory).
 		SetModel(openai.GPT4).
 		SetMaxRecursion(2).

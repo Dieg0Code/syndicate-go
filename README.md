@@ -66,7 +66,7 @@ func main() {
 	agent, err := gokamy.NewAgentBuilder().
 		SetClient(client).
 		SetName("HaikuAgent").
-		SetSystemPrompt(systemPrompt).
+		SetConfigPrompt(systemPrompt).
 		SetMemory(memory).
 		SetModel(openai.GPT4).
 		SetMaxRecursion(2).
@@ -116,7 +116,7 @@ func main() {
 	agentOne, err := gokamy.NewAgentBuilder().
 		SetClient(client).
 		SetName("HelloAgent").
-		SetSystemPrompt("You are an agent that warmly greets users and encourages further interaction.").
+		SetConfigPrompt("You are an agent that warmly greets users and encourages further interaction.").
 		SetMemory(memoryAgentOne).
 		SetModel(openai.GPT4).
 		SetMaxRecursion(2).
@@ -129,7 +129,7 @@ func main() {
 	agentTwo, err := gokamy.NewAgentBuilder().
 		SetClient(client).
 		SetName("FinalAgent").
-		SetSystemPrompt("You are an agent that provides a final summary based on the conversation.").
+		SetConfigPrompt("You are an agent that provides a final summary based on the conversation.").
 		SetMemory(memoryAgentTwo).
 		SetModel(openai.GPT4).
 		SetMaxRecursion(2).
@@ -302,7 +302,7 @@ func main() {
     agentOne, err := gomaky.NewAgentBuilder().
         SetClient(client).
         SetName("HelloAgent").
-        SetSystemPrompt("You are an agent that warmly greets users and encourages further interaction.").
+        SetConfigPrompt("You are an agent that warmly greets users and encourages further interaction.").
         SetMemory(memoryAgentOne).
         SetModel(openai.GPT4).
         SetMaxRecursion(2).
@@ -315,7 +315,7 @@ func main() {
     agentTwo, err := gomaky.NewAgentBuilder().
         SetClient(client).
         SetName("FinalAgent").
-        SetSystemPrompt("You are an agent that provides a final summary based on the conversation.").
+        SetConfigPrompt("You are an agent that provides a final summary based on the conversation.").
         SetMemory(memoryAgentTwo).
         SetModel(openai.GPT4).
         SetMaxRecursion(2).
@@ -386,7 +386,7 @@ func main() {
 	agent, err := gokamy.NewAgentBuilder().
 		SetClient(client).
 		SetName("AdvancedAgent").
-		SetSystemPrompt(systemPrompt).
+		SetConfigPrompt(systemPrompt).
 		SetMemory(memory).
 		SetModel(openai.GPT4).
 		SetMaxRecursion(2).
