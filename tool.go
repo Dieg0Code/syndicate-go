@@ -98,12 +98,67 @@ func reflectSchema(t reflect.Type) (*Definition, error) {
 	return &d, nil
 }
 
+// processField is a helper to process a struct field and generate its associated JSON schema component.
+func processField(field reflect.StructField) (jsonTag string, schema *Definition, required bool, err error) {
+	jsonTag = field.Tag.Get("json")
+	if jsonTag == "-" {
+		return "", nil, false, nil // Field is ignored.
+	}
+	required = true // Por defecto el campo es requerido.
+
+	if jsonTag == "" {
+		jsonTag = field.Name
+	} else {
+		parts := strings.Split(jsonTag, ",")
+		jsonTag = parts[0]
+		// Si se especifica 'omitempty', el campo no es requerido.
+		for _, opt := range parts[1:] {
+			if strings.TrimSpace(opt) == "omitempty" {
+				required = false
+				break
+			}
+		}
+	}
+
+	// Genera el schema recursivamente para el tipo del campo.
+	schema, err = reflectSchema(field.Type)
+	if err != nil {
+		return "", nil, false, err
+	}
+
+	// Asigna la descripción si está presente.
+	if description := strings.TrimSpace(field.Tag.Get("description")); description != "" {
+		schema.Description = description
+	}
+
+	// Manejo del tag "enum".
+	if enumTag := field.Tag.Get("enum"); enumTag != "" {
+		var enumValues []string
+		for _, v := range strings.Split(enumTag, ",") {
+			if trimmed := strings.TrimSpace(v); trimmed != "" {
+				enumValues = append(enumValues, trimmed)
+			}
+		}
+		if len(enumValues) > 0 {
+			schema.Enum = enumValues
+		}
+	}
+
+	// Permite sobreescribir el valor por defecto de requerido mediante el tag "required".
+	if reqTag := field.Tag.Get("required"); reqTag != "" {
+		if parsed, pErr := strconv.ParseBool(reqTag); pErr == nil {
+			required = parsed
+		}
+	}
+
+	return jsonTag, schema, required, nil
+}
+
 func reflectSchemaObject(t reflect.Type) (*Definition, error) {
 	def := Definition{
 		Type:                 Object,
 		AdditionalProperties: false,
 	}
-
 	properties := make(map[string]Definition)
 	var requiredFields []string
 
@@ -113,66 +168,21 @@ func reflectSchemaObject(t reflect.Type) (*Definition, error) {
 			continue
 		}
 
-		// Determina el nombre de la propiedad con base en el tag "json".
-		jsonTag := field.Tag.Get("json")
-		// Si el tag es "-", se omite el campo.
-		if jsonTag == "-" {
-			continue
-		}
-		var required = true
-		if jsonTag == "" {
-			jsonTag = field.Name
-		} else {
-			// Si el tag incluye opciones, se extrae el primero (nombre).
-			parts := strings.Split(jsonTag, ",")
-			jsonTag = parts[0]
-			// Se marca como no requerido si se especifica "omitempty".
-			for _, opt := range parts[1:] {
-				if strings.TrimSpace(opt) == "omitempty" {
-					required = false
-					break
-				}
-			}
-		}
-
-		// Genera el schema recursivamente para el tipo del campo.
-		item, err := reflectSchema(field.Type)
+		tag, schema, req, err := processField(field)
 		if err != nil {
 			return nil, err
 		}
-
-		// Asigna la descripción, si está presente.
-		if description := strings.TrimSpace(field.Tag.Get("description")); description != "" {
-			item.Description = description
+		// Si tag está vacío significa que el campo se omite.
+		if tag == "" {
+			continue
 		}
 
-		// Manejo robusto del tag "enum".
-		if enumTag := field.Tag.Get("enum"); enumTag != "" {
-			var enumValues []string
-			// Separa y limpia los posibles valores.
-			for _, v := range strings.Split(enumTag, ",") {
-				if trimmed := strings.TrimSpace(v); trimmed != "" {
-					enumValues = append(enumValues, trimmed)
-				}
-			}
-			if len(enumValues) > 0 {
-				item.Enum = enumValues
-			}
-		}
-
-		properties[jsonTag] = *item
-
-		// Revisa si se definió el tag "required" para sobreescribir.
-		if reqTag := field.Tag.Get("required"); reqTag != "" {
-			if parsed, err := strconv.ParseBool(reqTag); err == nil {
-				required = parsed
-			}
-		}
-		if required {
-			requiredFields = append(requiredFields, jsonTag)
+		properties[tag] = *schema
+		if req {
+			requiredFields = append(requiredFields, tag)
 		}
 	}
-	def.Required = requiredFields
 	def.Properties = properties
+	def.Required = requiredFields
 	return &def, nil
 }
