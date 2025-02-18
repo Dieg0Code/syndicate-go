@@ -4,6 +4,12 @@
   <img src="https://i.imgur.com/fKAZo4d.png" alt="gokamy">
 </div>
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/Dieg0code/gokamy-ai)](https://goreportcard.com/report/github.com/Dieg0code/gokamy-ai)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/Dieg0code/gokamy-ai/ci.yml?branch=main)](https://github.com/Dieg0code/gokamy-ai/actions)
+[![GoDoc](https://godoc.org/github.com/Dieg0code/gokamy-ai?status.svg)](https://pkg.go.dev/github.com/Dieg0code/gokamy-ai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Release](https://img.shields.io/github/v/release/Dieg0code/gokamy-ai)](https://github.com/Dieg0code/gokamy-ai/releases)
+
 Built on top of the [sashabaranov/go-openai](https://github.com/sashabaranov/go-openai) library, Gokamy SDK is a lightweight, flexible, and extensible toolkit for building intelligent conversational agents in Golang. It enables you to create agents, engineer prompts, generate tool schemas, manage memory, and orchestrate complex workflows—making it easy to integrate advanced AI capabilities into your projects. 🚀
 
 ## Features
