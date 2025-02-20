@@ -77,7 +77,24 @@ func (b *BaseAgent) Process(ctx context.Context, userName, input string, additio
 	if b.buildError != nil {
 		return "", fmt.Errorf("agent build error: %w", b.buildError)
 	}
-	return b.processWithDepth(ctx, userName, input, 0, additionalMessages...)
+
+	b.mutex.Lock()
+	// Agregamos el mensaje inicial del usuario
+	b.memory.Add(openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleUser,
+		Name:    userName,
+		Content: input,
+	})
+
+	// Preparamos los mensajes iniciales
+	messages := b.prepareMessages()
+	for _, additional := range additionalMessages {
+		messages = append(messages, additional...)
+	}
+	tools := b.prepareTools()
+	b.mutex.Unlock()
+
+	return b.processWithTools(ctx, messages, tools)
 }
 
 // SetConfigPrompt sets the configuration prompt for the agent.
@@ -86,29 +103,11 @@ func (b *BaseAgent) SetConfigPrompt(prompt string) {
 }
 
 // processWithDepth handles recursive processing and tool execution.
-func (b *BaseAgent) processWithDepth(ctx context.Context, userName, input string, depth int, additionalMessages ...[]openai.ChatCompletionMessage) (string, error) {
-	if depth > b.maxRecursion {
-		return "", errors.New("recursion limit reached")
-	}
-
-	b.mutex.Lock()
-	// Agregamos el mensaje del usuario incluyendo su identificador
-	b.memory.Add(openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleUser,
-		Name:    userName,
-		Content: input,
-	})
-	messages := b.prepareMessages()
-	for _, additional := range additionalMessages {
-		messages = append(messages, additional...)
-	}
-	tools := b.prepareTools()
-	b.mutex.Unlock()
-
+// processWithTools maneja el procesamiento y ejecución de herramientas
+func (b *BaseAgent) processWithTools(ctx context.Context, messages []openai.ChatCompletionMessage, tools []openai.Tool) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	// Creamos la solicitud incluyendo temperatura y formato de respuesta si están configurados
 	request := openai.ChatCompletionRequest{
 		Model:    b.model,
 		Messages: messages,
@@ -128,17 +127,34 @@ func (b *BaseAgent) processWithDepth(ctx context.Context, userName, input string
 		return "", fmt.Errorf("error in chat completion: %w", err)
 	}
 
-	if len(resp.Choices) > 0 && resp.Choices[0].FinishReason == openai.FinishReasonToolCalls {
-		return b.handleToolCalls(ctx, resp.Choices[0].Message.ToolCalls, depth)
+	if len(resp.Choices) == 0 {
+		return "", errors.New("no response choices available")
 	}
 
-	response := resp.Choices[0].Message.Content
+	choice := resp.Choices[0]
+
+	// Si la respuesta requiere llamadas a herramientas
+	if choice.FinishReason == openai.FinishReasonToolCalls {
+		if err := b.handleToolCalls(choice.Message.ToolCalls); err != nil {
+			return "", err
+		}
+
+		// Preparamos nuevos mensajes incluyendo los resultados de las herramientas
+		b.mutex.Lock()
+		newMessages := b.prepareMessages()
+		b.mutex.Unlock()
+
+		// Procesamos nuevamente con los resultados de las herramientas incluidos
+		return b.processWithTools(ctx, newMessages, tools)
+	}
+
+	// Si es una respuesta final, la guardamos y la devolvemos
+	response := choice.Message.Content
 	b.mutex.Lock()
-	// Registramos el mensaje del agente; opcionalmente, podrías incluir su nombre (que ya está definido en el builder)
 	b.memory.Add(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
 		Content: response,
-		Name:    b.name, // Aquí asignas el nombre del agente
+		Name:    b.name,
 	})
 	b.mutex.Unlock()
 
@@ -146,7 +162,7 @@ func (b *BaseAgent) processWithDepth(ctx context.Context, userName, input string
 }
 
 // handleToolCalls handles tool execution during the agent's processing.
-func (b *BaseAgent) handleToolCalls(ctx context.Context, toolCalls []openai.ToolCall, depth int) (string, error) {
+func (b *BaseAgent) handleToolCalls(toolCalls []openai.ToolCall) error {
 	var wg sync.WaitGroup
 	type toolResult struct {
 		CallID  string
@@ -177,7 +193,6 @@ func (b *BaseAgent) handleToolCalls(ctx context.Context, toolCalls []openai.Tool
 				return
 			}
 
-			// Convertir el resultado a string
 			resultBytes, err := json.Marshal(result)
 			if err != nil {
 				results[i].Error = fmt.Errorf("error marshalling tool result: %w", err)
@@ -193,11 +208,10 @@ func (b *BaseAgent) handleToolCalls(ctx context.Context, toolCalls []openai.Tool
 	// Procesar resultados y detectar errores
 	for _, r := range results {
 		if r.Error != nil {
-			return "", r.Error
+			return r.Error
 		}
 
 		b.mutex.Lock()
-		// Actualizado para usar el nuevo método Add
 		b.memory.Add(openai.ChatCompletionMessage{
 			Role:       openai.ChatMessageRoleTool,
 			Content:    r.Content,
@@ -207,7 +221,7 @@ func (b *BaseAgent) handleToolCalls(ctx context.Context, toolCalls []openai.Tool
 		b.mutex.Unlock()
 	}
 
-	return b.processWithDepth(ctx, "system", "Synthesize and analyze the results obtained from the tools", depth+1)
+	return nil
 }
 
 // prepareMessages prepares the messages for the API request.
