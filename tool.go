@@ -10,13 +10,19 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
+// Tool defines the interface for tools that can be integrated into the system.
+// A tool must provide its function definition and implement an execution method.
 type Tool interface {
+	// GetDefinition returns the function definition for the tool.
 	GetDefinition() *openai.FunctionDefinition
+	// Execute runs the tool with the provided arguments (in JSON format) and returns the result.
 	Execute(args json.RawMessage) (any, error)
 }
 
+// DataType represents a JSON data type in the generated schema.
 type DataType string
 
+// Supported JSON data types.
 const (
 	Object  DataType = "object"
 	Number  DataType = "number"
@@ -28,7 +34,7 @@ const (
 )
 
 // Definition is a struct for describing a JSON Schema.
-// It is fairly limited, and you may have better luck using a third-party library.
+// It includes type, description, enumeration values, properties, required fields, and additional items.
 type Definition struct {
 	Type                 DataType              `json:"type,omitempty"`
 	Description          string                `json:"description,omitempty"`
@@ -39,6 +45,8 @@ type Definition struct {
 	AdditionalProperties any                   `json:"additionalProperties,omitempty"`
 }
 
+// MarshalJSON provides custom JSON marshalling for the Definition type.
+// It ensures that the Properties map is initialized before marshalling.
 func (d *Definition) MarshalJSON() ([]byte, error) {
 	if d.Properties == nil {
 		d.Properties = make(map[string]Definition)
@@ -51,10 +59,13 @@ func (d *Definition) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// GenerateSchema generates a JSON schema Definition for the given value.
+// It uses reflection to derive the schema based on the type of v.
 func GenerateSchema(v any) (*Definition, error) {
 	return reflectSchema(reflect.TypeOf(v))
 }
 
+// reflectSchema generates a JSON schema Definition by reflecting on the provided type.
 func reflectSchema(t reflect.Type) (*Definition, error) {
 	var d Definition
 	switch t.Kind() {
@@ -69,6 +80,7 @@ func reflectSchema(t reflect.Type) (*Definition, error) {
 		d.Type = Boolean
 	case reflect.Slice, reflect.Array:
 		d.Type = Array
+		// Recursively generate the schema for the element type.
 		items, err := reflectSchema(t.Elem())
 		if err != nil {
 			return nil, err
@@ -76,6 +88,7 @@ func reflectSchema(t reflect.Type) (*Definition, error) {
 		d.Items = items
 	case reflect.Struct:
 		d.Type = Object
+		// Disallow additional properties by default.
 		d.AdditionalProperties = false
 		objDef, err := reflectSchemaObject(t)
 		if err != nil {
@@ -83,6 +96,7 @@ func reflectSchema(t reflect.Type) (*Definition, error) {
 		}
 		d = *objDef
 	case reflect.Ptr:
+		// Dereference pointers and generate schema for the underlying type.
 		definition, err := reflectSchema(t.Elem())
 		if err != nil {
 			return nil, err
@@ -93,25 +107,27 @@ func reflectSchema(t reflect.Type) (*Definition, error) {
 		reflect.UnsafePointer:
 		return nil, fmt.Errorf("unsupported type: %s", t.Kind().String())
 	default:
-		// Se puede definir un caso default para tipos inesperados si se requiere.
+		// A default case for unexpected types can be defined if required.
 	}
 	return &d, nil
 }
 
-// processField is a helper to process a struct field and generate its associated JSON schema component.
+// processField is a helper function that processes a struct field and generates its associated JSON schema component.
+// It returns the JSON tag name, the generated schema, a flag indicating whether the field is required, and an error if any.
 func processField(field reflect.StructField) (jsonTag string, schema *Definition, required bool, err error) {
+	// Retrieve the JSON tag from the field.
 	jsonTag = field.Tag.Get("json")
 	if jsonTag == "-" {
 		return "", nil, false, nil // Field is ignored.
 	}
-	required = true // Por defecto el campo es requerido.
+	required = true // By default, the field is required.
 
 	if jsonTag == "" {
 		jsonTag = field.Name
 	} else {
 		parts := strings.Split(jsonTag, ",")
 		jsonTag = parts[0]
-		// Si se especifica 'omitempty', el campo no es requerido.
+		// If 'omitempty' is specified, the field is not required.
 		for _, opt := range parts[1:] {
 			if strings.TrimSpace(opt) == "omitempty" {
 				required = false
@@ -120,18 +136,18 @@ func processField(field reflect.StructField) (jsonTag string, schema *Definition
 		}
 	}
 
-	// Genera el schema recursivamente para el tipo del campo.
+	// Recursively generate the schema for the field's type.
 	schema, err = reflectSchema(field.Type)
 	if err != nil {
 		return "", nil, false, err
 	}
 
-	// Asigna la descripción si está presente.
+	// Assign the description if provided.
 	if description := strings.TrimSpace(field.Tag.Get("description")); description != "" {
 		schema.Description = description
 	}
 
-	// Manejo del tag "enum".
+	// Handle the "enum" tag to specify enumeration values.
 	if enumTag := field.Tag.Get("enum"); enumTag != "" {
 		var enumValues []string
 		for _, v := range strings.Split(enumTag, ",") {
@@ -144,7 +160,7 @@ func processField(field reflect.StructField) (jsonTag string, schema *Definition
 		}
 	}
 
-	// Permite sobreescribir el valor por defecto de requerido mediante el tag "required".
+	// Allow overriding the default required value using the "required" tag.
 	if reqTag := field.Tag.Get("required"); reqTag != "" {
 		if parsed, pErr := strconv.ParseBool(reqTag); pErr == nil {
 			required = parsed
@@ -154,6 +170,8 @@ func processField(field reflect.StructField) (jsonTag string, schema *Definition
 	return jsonTag, schema, required, nil
 }
 
+// reflectSchemaObject generates a JSON schema Definition for a struct type.
+// It iterates over the exported fields, processes each field, and constructs the schema properties.
 func reflectSchemaObject(t reflect.Type) (*Definition, error) {
 	def := Definition{
 		Type:                 Object,
@@ -162,8 +180,10 @@ func reflectSchemaObject(t reflect.Type) (*Definition, error) {
 	properties := make(map[string]Definition)
 	var requiredFields []string
 
+	// Iterate over each field in the struct.
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
+		// Skip unexported fields.
 		if !field.IsExported() {
 			continue
 		}
@@ -172,7 +192,7 @@ func reflectSchemaObject(t reflect.Type) (*Definition, error) {
 		if err != nil {
 			return nil, err
 		}
-		// Si tag está vacío significa que el campo se omite.
+		// If the JSON tag is empty, the field is omitted.
 		if tag == "" {
 			continue
 		}

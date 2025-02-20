@@ -6,37 +6,41 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
-// Memory interface define métodos para manejar el historial de mensajes
+// Memory defines the interface for managing a history of chat messages.
+// It provides methods for adding messages, retrieving the complete history, and clearing the history.
 type Memory interface {
-	// Add añade un mensaje ChatCompletionMessage completo
+	// Add appends a complete ChatCompletionMessage to the memory.
 	Add(message openai.ChatCompletionMessage)
-	// Get devuelve todos los mensajes
+	// Get returns a copy of all stored chat messages.
 	Get() []openai.ChatCompletionMessage
-	// Clear elimina todos los mensajes
+	// Clear removes all stored chat messages from memory.
 	Clear()
 }
 
-// SimpleMemory implementa una memoria básica para el agente
+// SimpleMemory implements a basic in-memory storage for chat messages.
+// It uses a slice to store messages and a RWMutex for safe concurrent access.
 type SimpleMemory struct {
-	messages []openai.ChatCompletionMessage
-	mutex    sync.RWMutex
+	messages []openai.ChatCompletionMessage // Slice holding the chat messages.
+	mutex    sync.RWMutex                   // RWMutex to ensure thread-safe access to messages.
 }
 
-// Add implementa Memory.Add para añadir un mensaje completo
+// Add appends a complete chat message to the SimpleMemory.
 func (s *SimpleMemory) Add(message openai.ChatCompletionMessage) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.messages = append(s.messages, message)
 }
 
-// Clear implementa Memory.Clear
+// Clear removes all stored messages from the memory.
 func (s *SimpleMemory) Clear() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.messages = make([]openai.ChatCompletionMessage, 0)
 }
 
-// Get implementa Memory.Get
+// Get returns a copy of all stored chat messages to avoid data races.
+// A copy of the messages slice is returned to ensure that external modifications
+// do not affect the internal state.
 func (s *SimpleMemory) Get() []openai.ChatCompletionMessage {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
@@ -45,7 +49,8 @@ func (s *SimpleMemory) Get() []openai.ChatCompletionMessage {
 	return copyMessages
 }
 
-// NewSimpleMemory crea una nueva instancia de SimpleMemory
+// NewSimpleMemory creates and returns a new instance of SimpleMemory.
+// It initializes the internal message slice and ensures the memory is ready for use.
 func NewSimpleMemory() Memory {
 	return &SimpleMemory{
 		messages: make([]openai.ChatCompletionMessage, 0),

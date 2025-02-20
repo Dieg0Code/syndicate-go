@@ -76,7 +76,6 @@ func main() {
 		SetConfigPrompt(systemPrompt).
 		SetMemory(memory).
 		SetModel(openai.GPT4).
-		SetMaxRecursion(2).
 		Build()
 	if err != nil {
 		log.Fatalf("Error building agent: %v", err)
@@ -126,7 +125,6 @@ func main() {
 		SetConfigPrompt("You are an agent that warmly greets users and encourages further interaction.").
 		SetMemory(memoryAgentOne).
 		SetModel(openai.GPT4).
-		SetMaxRecursion(2).
 		Build()
 	if err != nil {
 		log.Fatalf("Error building HelloAgent: %v", err)
@@ -139,7 +137,6 @@ func main() {
 		SetConfigPrompt("You are an agent that provides a final summary based on the conversation.").
 		SetMemory(memoryAgentTwo).
 		SetModel(openai.GPT4).
-		SetMaxRecursion(2).
 		Build()
 	if err != nil {
 		log.Fatalf("Error building FinalAgent: %v", err)
@@ -312,7 +309,6 @@ func main() {
         SetConfigPrompt("You are an agent that warmly greets users and encourages further interaction.").
         SetMemory(memoryAgentOne).
         SetModel(openai.GPT4).
-        SetMaxRecursion(2).
         Build()
     if err != nil {
         log.Fatalf("Error building HelloAgent: %v", err)
@@ -325,7 +321,6 @@ func main() {
         SetConfigPrompt("You are an agent that provides a final summary based on the conversation.").
         SetMemory(memoryAgentTwo).
         SetModel(openai.GPT4).
-        SetMaxRecursion(2).
         Build()
     if err != nil {
         log.Fatalf("Error building FinalAgent: %v", err)
@@ -396,7 +391,6 @@ func main() {
 		SetConfigPrompt(systemPrompt).
 		SetMemory(memory).
 		SetModel(openai.GPT4).
-		SetMaxRecursion(2).
 		SetTemperature(0.7).                // Set the temperature to influence randomness.
 		SetJSONResponseFormat(MyResponse{}). // Set the expected JSON response format using tags.
 		Build()

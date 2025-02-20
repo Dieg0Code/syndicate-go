@@ -62,7 +62,6 @@ func main() {
 		SetConfigPrompt("You are an agent that logs all messages to a custom memory implementation.").
 		SetMemory(customMemory).
 		SetModel(openai.GPT4).
-		SetMaxRecursion(2).
 		Build()
 	if err != nil {
 		log.Fatalf("Error building agent: %v", err)

@@ -35,7 +35,6 @@ func main() {
 		SetConfigPrompt(systemPrompt).
 		SetMemory(memory).
 		SetModel(openai.GPT4).
-		SetMaxRecursion(2). // Prevent infinite loops in tool calls.
 		Build()
 
 	if err != nil {

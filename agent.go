@@ -1,3 +1,5 @@
+// Package gokamy provides an SDK for interfacing with OpenAI's API,
+// offering agents that process inputs, manage tool execution, and maintain memory.
 package gokamy
 
 import (
@@ -13,9 +15,11 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
+// ChatMessageRoleDeveloper is used as a custom role when the agent acts in developer mode.
 const ChatMessageRoleDeveloper = "developer"
 
-// getSystemRole determina el rol para el prompt del sistema basado en el modelo.
+// getSystemRole determines the system role for the prompt based on the model being used.
+// For specific reasoner models, it returns a custom "developer" role.
 func getSystemRole(model string) string {
 	reasonerModels := []string{
 		openai.O1Mini,
@@ -36,7 +40,9 @@ func getSystemRole(model string) string {
 	return openai.ChatMessageRoleSystem
 }
 
-// Agent interface defines the methods for processing inputs and managing tools.
+// Agent defines the interface for processing inputs and managing tools.
+// Implementations of Agent should support processing messages, adding tools,
+// configuring prompts, and providing a name identifier.
 type Agent interface {
 	Process(ctx context.Context, userName string, input string, additionalMessages ...[]openai.ChatCompletionMessage) (string, error)
 	AddTool(tool Tool)
@@ -44,7 +50,8 @@ type Agent interface {
 	GetName() string
 }
 
-// BaseAgent holds the common implementation of the Agent interface.
+// BaseAgent holds the common implementation of the Agent interface, including
+// the OpenAI client, system prompt, tools, memory, model configuration, and concurrency control.
 type BaseAgent struct {
 	client         *openai.Client
 	name           string
@@ -53,13 +60,12 @@ type BaseAgent struct {
 	memory         Memory
 	model          string
 	mutex          sync.RWMutex
-	maxRecursion   int
 	temperature    float32
 	responseFormat *openai.ChatCompletionResponseFormat
 	buildError     error
 }
 
-// AddTool adds a tool to the agent.
+// AddTool adds a tool to the agent's collection, allowing it to be used during processing.
 func (b *BaseAgent) AddTool(tool Tool) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
@@ -67,26 +73,27 @@ func (b *BaseAgent) AddTool(tool Tool) {
 	b.tools[def.Name] = tool
 }
 
-// GetName returns the name of the agent.
+// GetName returns the name identifier of the agent.
 func (b *BaseAgent) GetName() string {
 	return b.name
 }
 
-// Process processes input with additional messages and tools.
+// Process takes the user input along with optional additional messages,
+// adds the initial user message to memory, and initiates processing with available tools.
 func (b *BaseAgent) Process(ctx context.Context, userName, input string, additionalMessages ...[]openai.ChatCompletionMessage) (string, error) {
 	if b.buildError != nil {
 		return "", fmt.Errorf("agent build error: %w", b.buildError)
 	}
 
 	b.mutex.Lock()
-	// Agregamos el mensaje inicial del usuario
+	// Add the initial user message to the agent's memory.
 	b.memory.Add(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
 		Name:    userName,
 		Content: input,
 	})
 
-	// Preparamos los mensajes iniciales
+	// Prepare the initial set of messages from memory and system prompt.
 	messages := b.prepareMessages()
 	for _, additional := range additionalMessages {
 		messages = append(messages, additional...)
@@ -97,13 +104,13 @@ func (b *BaseAgent) Process(ctx context.Context, userName, input string, additio
 	return b.processWithTools(ctx, messages, tools)
 }
 
-// SetConfigPrompt sets the configuration prompt for the agent.
+// SetConfigPrompt sets the system prompt for the agent, which can be used to configure behavior.
 func (b *BaseAgent) SetConfigPrompt(prompt string) {
 	b.systemPrompt = prompt
 }
 
-// processWithDepth handles recursive processing and tool execution.
-// processWithTools maneja el procesamiento y ejecución de herramientas
+// processWithTools handles the API request to OpenAI, including executing tool calls if required.
+// It manages context timeout, request setup, and response processing.
 func (b *BaseAgent) processWithTools(ctx context.Context, messages []openai.ChatCompletionMessage, tools []openai.Tool) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -114,9 +121,11 @@ func (b *BaseAgent) processWithTools(ctx context.Context, messages []openai.Chat
 		Tools:    tools,
 	}
 
+	// Set temperature if specified.
 	if b.temperature > 0 {
 		request.Temperature = b.temperature
 	}
+	// Set response format if defined.
 	if b.responseFormat != nil {
 		request.ResponseFormat = b.responseFormat
 	}
@@ -133,22 +142,22 @@ func (b *BaseAgent) processWithTools(ctx context.Context, messages []openai.Chat
 
 	choice := resp.Choices[0]
 
-	// Si la respuesta requiere llamadas a herramientas
+	// If the response indicates that tool calls are required.
 	if choice.FinishReason == openai.FinishReasonToolCalls {
 		if err := b.handleToolCalls(choice.Message.ToolCalls); err != nil {
 			return "", err
 		}
 
-		// Preparamos nuevos mensajes incluyendo los resultados de las herramientas
+		// Prepare new messages including the results from tool executions.
 		b.mutex.Lock()
 		newMessages := b.prepareMessages()
 		b.mutex.Unlock()
 
-		// Procesamos nuevamente con los resultados de las herramientas incluidos
+		// Process the updated messages with the tools included.
 		return b.processWithTools(ctx, newMessages, tools)
 	}
 
-	// Si es una respuesta final, la guardamos y la devolvemos
+	// Final response received: save it to memory and return.
 	response := choice.Message.Content
 	b.mutex.Lock()
 	b.memory.Add(openai.ChatCompletionMessage{
@@ -161,7 +170,8 @@ func (b *BaseAgent) processWithTools(ctx context.Context, messages []openai.Chat
 	return response, nil
 }
 
-// handleToolCalls handles tool execution during the agent's processing.
+// handleToolCalls executes each tool call concurrently and collects their results.
+// It updates the agent's memory with the tool results and handles errors during execution.
 func (b *BaseAgent) handleToolCalls(toolCalls []openai.ToolCall) error {
 	var wg sync.WaitGroup
 	type toolResult struct {
@@ -172,7 +182,7 @@ func (b *BaseAgent) handleToolCalls(toolCalls []openai.ToolCall) error {
 	}
 	results := make([]toolResult, len(toolCalls))
 
-	// Procesar todas las llamadas a herramientas en paralelo
+	// Process all tool calls concurrently.
 	for i, call := range toolCalls {
 		wg.Add(1)
 		go func(i int, call openai.ToolCall) {
@@ -187,6 +197,7 @@ func (b *BaseAgent) handleToolCalls(toolCalls []openai.ToolCall) error {
 				return
 			}
 
+			// Execute the tool using the provided arguments.
 			result, err := tool.Execute([]byte(call.Function.Arguments))
 			if err != nil {
 				results[i].Error = fmt.Errorf("error executing tool %s: %w", call.Function.Name, err)
@@ -205,7 +216,7 @@ func (b *BaseAgent) handleToolCalls(toolCalls []openai.ToolCall) error {
 
 	wg.Wait()
 
-	// Procesar resultados y detectar errores
+	// Process the results and detect any errors.
 	for _, r := range results {
 		if r.Error != nil {
 			return r.Error
@@ -224,7 +235,7 @@ func (b *BaseAgent) handleToolCalls(toolCalls []openai.ToolCall) error {
 	return nil
 }
 
-// prepareMessages prepares the messages for the API request.
+// prepareMessages compiles the messages to be sent to the API, including the system prompt and conversation memory.
 func (a *BaseAgent) prepareMessages() []openai.ChatCompletionMessage {
 	messages := []openai.ChatCompletionMessage{}
 	if a.systemPrompt != "" {
@@ -237,7 +248,7 @@ func (a *BaseAgent) prepareMessages() []openai.ChatCompletionMessage {
 	return messages
 }
 
-// prepareTools prepares the tools for the API request.
+// prepareTools compiles the list of tools to be included in the API request.
 func (a *BaseAgent) prepareTools() []openai.Tool {
 	toolsList := []openai.Tool{}
 	for _, tool := range a.tools {
@@ -249,37 +260,37 @@ func (a *BaseAgent) prepareTools() []openai.Tool {
 	return toolsList
 }
 
-// AgentConfig holds configuration for creating an agent.
+// AgentConfig holds configuration parameters for creating an agent instance.
 type AgentConfig struct {
 	Client       *openai.Client
 	Name         string
 	SystemPrompt string
 	Memory       Memory
 	Model        string
-	MaxRecursion int
 }
 
-// AgentBuilder allows for constructing an agent in a fluent and modular way.
+// AgentBuilder provides a fluent, modular way to configure and construct an Agent.
 type AgentBuilder struct {
 	client         *openai.Client
 	name           string
 	systemPrompt   string
 	memory         Memory
 	model          string
-	maxRecursion   int
 	tools          map[string]Tool
 	temperature    float32
 	responseFormat *openai.ChatCompletionResponseFormat
 	buildError     error
 }
 
-// NewAgentBuilder initializes a new AgentBuilder.
+// NewAgentBuilder initializes and returns a new instance of AgentBuilder.
 func NewAgentBuilder() *AgentBuilder {
 	return &AgentBuilder{
 		tools: make(map[string]Tool),
 	}
 }
 
+// SetJSONResponseFormat configures the agent to use a JSON schema for response formatting,
+// generating the schema from a provided sample type.
 func (b *AgentBuilder) SetJSONResponseFormat(typeSample any) *AgentBuilder {
 	schema, err := GenerateSchema(typeSample)
 	if err != nil {
@@ -298,55 +309,51 @@ func (b *AgentBuilder) SetJSONResponseFormat(typeSample any) *AgentBuilder {
 	return b
 }
 
-// SetClient sets the OpenAI client for the agent.
+// SetClient sets the OpenAI client to be used by the agent.
 func (b *AgentBuilder) SetClient(client *openai.Client) *AgentBuilder {
 	b.client = client
 	return b
 }
 
-// SetName sets the name of the agent.
+// SetName sets the name identifier for the agent.
 func (b *AgentBuilder) SetName(name string) *AgentBuilder {
 	b.name = name
 	return b
 }
 
-// SetConfigPrompt sets the configuration prompt for the agent.
+// SetConfigPrompt sets the system prompt that configures the agent's behavior.
 func (b *AgentBuilder) SetConfigPrompt(prompt string) *AgentBuilder {
 	b.systemPrompt = prompt
 	return b
 }
 
-// SetMemory sets the memory for the agent.
+// SetMemory sets the memory implementation for the agent.
 func (b *AgentBuilder) SetMemory(memory Memory) *AgentBuilder {
 	b.memory = memory
 	return b
 }
 
-// SetModel sets the model to be used by the agent.
+// SetModel configures the model to be used by the agent.
 func (b *AgentBuilder) SetModel(model string) *AgentBuilder {
 	b.model = model
 	return b
 }
 
-// SetMaxRecursion sets the maximum recursion depth for the agent.
-func (b *AgentBuilder) SetMaxRecursion(maxRecursion int) *AgentBuilder {
-	b.maxRecursion = maxRecursion
-	return b
-}
-
+// SetTemperature sets the temperature parameter for the agent's responses.
 func (b *AgentBuilder) SetTemperature(temperature float32) *AgentBuilder {
 	b.temperature = temperature
 	return b
 }
 
-// AddTool adds a tool to the agent.
+// AddTool adds a tool to the agent's configuration, making it available during processing.
 func (b *AgentBuilder) AddTool(tool Tool) *AgentBuilder {
 	def := tool.GetDefinition()
 	b.tools[def.Name] = tool
 	return b
 }
 
-// Build constructs the agent from the current configuration.
+// Build constructs and returns an Agent based on the current configuration.
+// It returns an error if any issues occurred during the builder setup.
 func (b *AgentBuilder) Build() (Agent, error) {
 	if b.buildError != nil {
 		return nil, b.buildError
@@ -359,7 +366,6 @@ func (b *AgentBuilder) Build() (Agent, error) {
 		tools:          b.tools,
 		memory:         b.memory,
 		model:          b.model,
-		maxRecursion:   b.maxRecursion,
 		temperature:    b.temperature,
 		responseFormat: b.responseFormat,
 		buildError:     b.buildError,
