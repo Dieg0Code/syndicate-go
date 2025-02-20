@@ -43,7 +43,7 @@ func main() {
 	}
 
 	// Process a sample input with the agent.
-	response, err := agent.Process(context.Background(), "What is the weather like today?")
+	response, err := agent.Process(context.Background(), "Jhon Doe", "What is the weather like today?")
 	if err != nil {
 		log.Fatalf("Error processing request: %v", err)
 	}

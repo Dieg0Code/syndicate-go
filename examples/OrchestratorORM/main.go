@@ -68,9 +68,12 @@ func main() {
 		log.Fatalf("Error building agent: %v", err)
 	}
 
+	// User name for the conversation.
+	userName := "User"
+
 	// Process a sample input with the agent.
 	input := "What is your favorite quote?"
-	response, err := agent.Process(context.Background(), input)
+	response, err := agent.Process(context.Background(), userName, input)
 	if err != nil {
 		log.Fatalf("Error processing request: %v", err)
 	}

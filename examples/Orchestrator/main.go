@@ -51,9 +51,12 @@ func main() {
 		SetSequence([]string{"HelloAgent", "FinalAgent"}).
 		Build()
 
+	// User name for the conversation.
+	userName := "User"
+
 	// Provide an input and process the sequence.
 	input := "Please greet the user and provide a summary."
-	response, err := orchestrator.ProcessSequence(context.Background(), input)
+	response, err := orchestrator.ProcessSequence(context.Background(), userName, input)
 	if err != nil {
 		log.Fatalf("Error processing sequence: %v", err)
 	}

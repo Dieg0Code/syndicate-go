@@ -26,13 +26,12 @@ func NewOrchestrator() *Orchestrator {
 }
 
 // Process executes a specific agent by combining the global history with the agent's internal memory.
-func (o *Orchestrator) Process(ctx context.Context, agentName string, input string) (string, error) {
+func (o *Orchestrator) Process(ctx context.Context, agentName, userName, input string) (string, error) {
 	agent, exists := o.GetAgent(agentName)
 	if !exists {
 		return "", fmt.Errorf("agent not found: %s", agentName)
 	}
 
-	// Combine globalHistory and the agent's internal memory (if it's a BaseAgent)
 	var messages []openai.ChatCompletionMessage
 	if baseAgent, ok := agent.(*BaseAgent); ok {
 		globalMessages := o.globalHistory.Get()
@@ -40,20 +39,22 @@ func (o *Orchestrator) Process(ctx context.Context, agentName string, input stri
 		messages = append(globalMessages, agentMessages...)
 	}
 
-	response, err := agent.Process(ctx, input, messages)
+	response, err := agent.Process(ctx, userName, input, messages)
 	if err != nil {
 		return "", err
 	}
 
-	// Update the global history
+	// Actualiza el historial global, si lo deseas
 	o.globalHistory.Add(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
 		Content: input,
+		Name:    userName,
 	})
 	prefixedResponse := fmt.Sprintf("[%s]: %s", agentName, response)
 	o.globalHistory.Add(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
 		Content: prefixedResponse,
+		Name:    agentName,
 	})
 
 	return response, nil
@@ -69,14 +70,14 @@ func (o *Orchestrator) GetAgent(name string) (Agent, bool) {
 
 // ProcessSequence defines an execution pipeline among agents.
 // The output of one agent is passed as input to the next.
-func (o *Orchestrator) ProcessSequence(ctx context.Context, input string) (string, error) {
+func (o *Orchestrator) ProcessSequence(ctx context.Context, userName, input string) (string, error) {
 	if len(o.sequence) == 0 {
 		return "", fmt.Errorf("no sequence defined in orchestrator")
 	}
 
 	currentInput := input
 	for _, agentName := range o.sequence {
-		resp, err := o.Process(ctx, agentName, currentInput)
+		resp, err := o.Process(ctx, agentName, userName, currentInput)
 		if err != nil {
 			return "", fmt.Errorf("error in agent %s: %w", agentName, err)
 		}

@@ -38,7 +38,7 @@ func getSystemRole(model string) string {
 
 // Agent interface defines the methods for processing inputs and managing tools.
 type Agent interface {
-	Process(ctx context.Context, input string, additionalMessages ...[]openai.ChatCompletionMessage) (string, error)
+	Process(ctx context.Context, userName string, input string, additionalMessages ...[]openai.ChatCompletionMessage) (string, error)
 	AddTool(tool Tool)
 	SetConfigPrompt(prompt string)
 	GetName() string
@@ -73,12 +73,11 @@ func (b *BaseAgent) GetName() string {
 }
 
 // Process processes input with additional messages and tools.
-func (b *BaseAgent) Process(ctx context.Context, input string, additionalMessages ...[]openai.ChatCompletionMessage) (string, error) {
+func (b *BaseAgent) Process(ctx context.Context, userName, input string, additionalMessages ...[]openai.ChatCompletionMessage) (string, error) {
 	if b.buildError != nil {
 		return "", fmt.Errorf("agent build error: %w", b.buildError)
 	}
-
-	return b.processWithDepth(ctx, input, 0, additionalMessages...)
+	return b.processWithDepth(ctx, userName, input, 0, additionalMessages...)
 }
 
 // SetConfigPrompt sets the configuration prompt for the agent.
@@ -87,15 +86,16 @@ func (b *BaseAgent) SetConfigPrompt(prompt string) {
 }
 
 // processWithDepth handles recursive processing and tool execution.
-func (b *BaseAgent) processWithDepth(ctx context.Context, input string, depth int, additionalMessages ...[]openai.ChatCompletionMessage) (string, error) {
+func (b *BaseAgent) processWithDepth(ctx context.Context, userName, input string, depth int, additionalMessages ...[]openai.ChatCompletionMessage) (string, error) {
 	if depth > b.maxRecursion {
 		return "", errors.New("recursion limit reached")
 	}
 
 	b.mutex.Lock()
-	// Actualizado para usar el nuevo método Add
+	// Agregamos el mensaje del usuario incluyendo su identificador
 	b.memory.Add(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
+		Name:    userName,
 		Content: input,
 	})
 	messages := b.prepareMessages()
@@ -115,12 +115,9 @@ func (b *BaseAgent) processWithDepth(ctx context.Context, input string, depth in
 		Tools:    tools,
 	}
 
-	// Añadir temperatura si está configurada
 	if b.temperature > 0 {
 		request.Temperature = b.temperature
 	}
-
-	// Añadir formato de respuesta si está configurado
 	if b.responseFormat != nil {
 		request.ResponseFormat = b.responseFormat
 	}
@@ -137,10 +134,11 @@ func (b *BaseAgent) processWithDepth(ctx context.Context, input string, depth in
 
 	response := resp.Choices[0].Message.Content
 	b.mutex.Lock()
-	// Actualizado para usar el nuevo método Add
+	// Registramos el mensaje del agente; opcionalmente, podrías incluir su nombre (que ya está definido en el builder)
 	b.memory.Add(openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
 		Content: response,
+		Name:    b.name, // Aquí asignas el nombre del agente
 	})
 	b.mutex.Unlock()
 
@@ -209,7 +207,7 @@ func (b *BaseAgent) handleToolCalls(ctx context.Context, toolCalls []openai.Tool
 		b.mutex.Unlock()
 	}
 
-	return b.processWithDepth(ctx, "Synthesize and analyze the results obtained from the tools", depth+1)
+	return b.processWithDepth(ctx, "system", "Synthesize and analyze the results obtained from the tools", depth+1)
 }
 
 // prepareMessages prepares the messages for the API request.
