@@ -61,7 +61,7 @@ type ToolDefinition struct {
 // Tool defines the interface for executable tools.
 type Tool interface {
 	GetDefinition() ToolDefinition
-	Execute(ctx context.Context, args json.RawMessage) (interface{}, error)
+	Execute(args json.RawMessage) (interface{}, error)
 }
 
 // ResponseFormat specifies how the LLM should format its response.

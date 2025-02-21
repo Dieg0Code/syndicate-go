@@ -184,7 +184,7 @@ func (b *BaseAgent) handleToolCalls(toolCalls []ToolCall) error {
 				return
 			}
 
-			result, err := tool.Execute(context.Background(), call.Args)
+			result, err := tool.Execute(call.Args)
 			if err != nil {
 				results[i].Error = fmt.Errorf("error executing tool %s: %w", call.Name, err)
 				return
@@ -211,6 +211,7 @@ func (b *BaseAgent) handleToolCalls(toolCalls []ToolCall) error {
 			Role:    RoleTool,
 			Content: r.Content,
 			Name:    r.Name,
+			ToolID:  r.CallID,
 		})
 		b.mutex.Unlock()
 	}
@@ -262,16 +263,9 @@ func NewAgentBuilder() *AgentBuilder {
 // SetJSONResponseFormat configures the agent to use a JSON schema for response formatting,
 // generating the schema from a provided sample type.
 func (b *AgentBuilder) SetJSONResponseFormat(schemaName string, structSchema any) *AgentBuilder {
-	schemaDef, err := GenerateSchema(structSchema) // Assumes GenerateSchema returns a json.RawMessage
+	schema, err := GenerateRawSchema(structSchema) // Assumes GenerateSchema returns a json.RawMessage
 	if err != nil {
 		b.buildError = fmt.Errorf("error generating schema: %w", err)
-		return b
-	}
-
-	// Marshal the tool definition into a json.RawMessage.
-	rawSchema, err := json.Marshal(schemaDef)
-	if err != nil {
-		b.buildError = fmt.Errorf("error marshalling schema: %w", err)
 		return b
 	}
 
@@ -279,7 +273,7 @@ func (b *AgentBuilder) SetJSONResponseFormat(schemaName string, structSchema any
 		Type: "json_schema",
 		JSONSchema: &JSONSchema{
 			Name:   schemaName,
-			Schema: rawSchema,
+			Schema: schema,
 			Strict: true,
 		},
 	}

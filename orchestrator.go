@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-
-	openai "github.com/sashabaranov/go-openai"
 )
 
 // Orchestrator manages multiple agents, maintains a global conversation history,
@@ -52,7 +50,7 @@ func (o *Orchestrator) Process(ctx context.Context, agentName, userName, input s
 
 	// Update the global history with the user's input.
 	o.globalHistory.Add(Message{
-		Role:    openai.ChatMessageRoleUser,
+		Role:    RoleUser,
 		Content: input,
 		Name:    userName,
 	})
@@ -60,7 +58,7 @@ func (o *Orchestrator) Process(ctx context.Context, agentName, userName, input s
 	prefixedResponse := fmt.Sprintf("[%s]: %s", agentName, response)
 	// Update the global history with the agent's response.
 	o.globalHistory.Add(Message{
-		Role:    openai.ChatMessageRoleAssistant,
+		Role:    RoleAssistant,
 		Content: prefixedResponse,
 		Name:    agentName,
 	})

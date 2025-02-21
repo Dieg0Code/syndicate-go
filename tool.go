@@ -48,9 +48,18 @@ func (d *Definition) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// GenerateRawSchema wraps GenerateSchema and returns the JSON marshalled schema.
+func GenerateRawSchema(v any) (json.RawMessage, error) {
+	def, err := generateSchema(v)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(def)
+}
+
 // GenerateSchema generates a JSON schema Definition for the given value.
 // It uses reflection to derive the schema based on the type of v.
-func GenerateSchema(v any) (*Definition, error) {
+func generateSchema(v any) (*Definition, error) {
 	return reflectSchema(reflect.TypeOf(v))
 }
 
