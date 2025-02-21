@@ -36,7 +36,7 @@ func (o *Orchestrator) Process(ctx context.Context, agentName, userName, input s
 		return "", fmt.Errorf("agent not found: %s", agentName)
 	}
 
-	var messages []openai.ChatCompletionMessage
+	var messages []Message
 	// If the agent is of type BaseAgent, combine the global and agent-specific messages.
 	if baseAgent, ok := agent.(*BaseAgent); ok {
 		globalMessages := o.globalHistory.Get()
@@ -51,7 +51,7 @@ func (o *Orchestrator) Process(ctx context.Context, agentName, userName, input s
 	}
 
 	// Update the global history with the user's input.
-	o.globalHistory.Add(openai.ChatCompletionMessage{
+	o.globalHistory.Add(Message{
 		Role:    openai.ChatMessageRoleUser,
 		Content: input,
 		Name:    userName,
@@ -59,7 +59,7 @@ func (o *Orchestrator) Process(ctx context.Context, agentName, userName, input s
 	// Prefix the agent's response with its name for clarity.
 	prefixedResponse := fmt.Sprintf("[%s]: %s", agentName, response)
 	// Update the global history with the agent's response.
-	o.globalHistory.Add(openai.ChatCompletionMessage{
+	o.globalHistory.Add(Message{
 		Role:    openai.ChatMessageRoleAssistant,
 		Content: prefixedResponse,
 		Name:    agentName,

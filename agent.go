@@ -15,9 +15,6 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
-// ChatMessageRoleDeveloper is used as a custom role when the agent acts in developer mode.
-const ChatMessageRoleDeveloper = "developer"
-
 // getSystemRole determines the system role for the prompt based on the model being used.
 // For specific reasoner models, it returns a custom "developer" role.
 func getSystemRole(model string) string {
@@ -34,7 +31,7 @@ func getSystemRole(model string) string {
 
 	for _, m := range reasonerModels {
 		if strings.EqualFold(model, m) {
-			return ChatMessageRoleDeveloper
+			return RoleDeveloper
 		}
 	}
 	return openai.ChatMessageRoleSystem
@@ -44,7 +41,7 @@ func getSystemRole(model string) string {
 // Implementations of Agent should support processing messages, adding tools,
 // configuring prompts, and providing a name identifier.
 type Agent interface {
-	Process(ctx context.Context, userName string, input string, additionalMessages ...[]openai.ChatCompletionMessage) (string, error)
+	Process(ctx context.Context, userName string, input string, additionalMessages ...[]Message) (string, error)
 	AddTool(tool Tool)
 	SetConfigPrompt(prompt string)
 	GetName() string
@@ -53,7 +50,7 @@ type Agent interface {
 // BaseAgent holds the common implementation of the Agent interface, including
 // the OpenAI client, system prompt, tools, memory, model configuration, and concurrency control.
 type BaseAgent struct {
-	client         *openai.Client
+	client         LLMClient
 	name           string
 	systemPrompt   string
 	tools          map[string]Tool
@@ -61,11 +58,12 @@ type BaseAgent struct {
 	model          string
 	mutex          sync.RWMutex
 	temperature    float32
-	responseFormat *openai.ChatCompletionResponseFormat
+	responseFormat *ResponseFormat
 	buildError     error
 }
 
-// AddTool adds a tool to the agent's collection, allowing it to be used during processing.
+// AddTool adds a tool to the agent.
+// AddTool adds a tool to the agent.
 func (b *BaseAgent) AddTool(tool Tool) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
@@ -80,24 +78,24 @@ func (b *BaseAgent) GetName() string {
 
 // Process takes the user input along with optional additional messages,
 // adds the initial user message to memory, and initiates processing with available tools.
-func (b *BaseAgent) Process(ctx context.Context, userName, input string, additionalMessages ...[]openai.ChatCompletionMessage) (string, error) {
+func (b *BaseAgent) Process(ctx context.Context, userName, input string, additionalMessages ...[]Message) (string, error) {
 	if b.buildError != nil {
 		return "", fmt.Errorf("agent build error: %w", b.buildError)
 	}
 
 	b.mutex.Lock()
-	// Add the initial user message to the agent's memory.
-	b.memory.Add(openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleUser,
+	// Add the user's message to memory.
+	b.memory.Add(Message{
+		Role:    RoleUser,
 		Name:    userName,
 		Content: input,
 	})
-
-	// Prepare the initial set of messages from memory and system prompt.
+	// Prepare messages: include the system prompt and the conversation memory.
 	messages := b.prepareMessages()
 	for _, additional := range additionalMessages {
 		messages = append(messages, additional...)
 	}
+	// Prepare tool definitions to be used.
 	tools := b.prepareTools()
 	b.mutex.Unlock()
 
@@ -111,26 +109,19 @@ func (b *BaseAgent) SetConfigPrompt(prompt string) {
 
 // processWithTools handles the API request to OpenAI, including executing tool calls if required.
 // It manages context timeout, request setup, and response processing.
-func (b *BaseAgent) processWithTools(ctx context.Context, messages []openai.ChatCompletionMessage, tools []openai.Tool) (string, error) {
+func (b *BaseAgent) processWithTools(ctx context.Context, messages []Message, tools []ToolDefinition) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	request := openai.ChatCompletionRequest{
-		Model:    b.model,
-		Messages: messages,
-		Tools:    tools,
+	req := ChatCompletionRequest{
+		Model:          b.model,
+		Messages:       messages,
+		Tools:          tools,
+		Temperature:    b.temperature,
+		ResponseFormat: b.responseFormat,
 	}
 
-	// Set temperature if specified.
-	if b.temperature > 0 {
-		request.Temperature = b.temperature
-	}
-	// Set response format if defined.
-	if b.responseFormat != nil {
-		request.ResponseFormat = b.responseFormat
-	}
-
-	resp, err := b.client.CreateChatCompletion(ctx, request)
+	resp, err := b.client.CreateChatCompletion(ctx, req)
 	if err != nil {
 		log.Printf("error in chat completion: %v", err)
 		return "", fmt.Errorf("error in chat completion: %w", err)
@@ -142,26 +133,22 @@ func (b *BaseAgent) processWithTools(ctx context.Context, messages []openai.Chat
 
 	choice := resp.Choices[0]
 
-	// If the response indicates that tool calls are required.
-	if choice.FinishReason == openai.FinishReasonToolCalls {
+	// If the response indicates that tool calls are required, execute them.
+	if choice.FinishReason == FinishReasonToolCalls {
 		if err := b.handleToolCalls(choice.Message.ToolCalls); err != nil {
 			return "", err
 		}
-
-		// Prepare new messages including the results from tool executions.
 		b.mutex.Lock()
 		newMessages := b.prepareMessages()
 		b.mutex.Unlock()
-
-		// Process the updated messages with the tools included.
 		return b.processWithTools(ctx, newMessages, tools)
 	}
 
-	// Final response received: save it to memory and return.
+	// Store the assistant's response in memory and return it.
 	response := choice.Message.Content
 	b.mutex.Lock()
-	b.memory.Add(openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleAssistant,
+	b.memory.Add(Message{
+		Role:    RoleAssistant,
 		Content: response,
 		Name:    b.name,
 	})
@@ -172,35 +159,34 @@ func (b *BaseAgent) processWithTools(ctx context.Context, messages []openai.Chat
 
 // handleToolCalls executes each tool call concurrently and collects their results.
 // It updates the agent's memory with the tool results and handles errors during execution.
-func (b *BaseAgent) handleToolCalls(toolCalls []openai.ToolCall) error {
+func (b *BaseAgent) handleToolCalls(toolCalls []ToolCall) error {
 	var wg sync.WaitGroup
+
 	type toolResult struct {
 		CallID  string
 		Name    string
 		Content string
 		Error   error
 	}
+
 	results := make([]toolResult, len(toolCalls))
 
-	// Process all tool calls concurrently.
 	for i, call := range toolCalls {
 		wg.Add(1)
-		go func(i int, call openai.ToolCall) {
+		go func(i int, call ToolCall) {
 			defer wg.Done()
-
 			results[i].CallID = call.ID
-			results[i].Name = call.Function.Name
+			results[i].Name = call.Name
 
-			tool, exists := b.tools[call.Function.Name]
+			tool, exists := b.tools[call.Name]
 			if !exists {
-				results[i].Error = fmt.Errorf("tool %s not found", call.Function.Name)
+				results[i].Error = fmt.Errorf("tool %s not found", call.Name)
 				return
 			}
 
-			// Execute the tool using the provided arguments.
-			result, err := tool.Execute([]byte(call.Function.Arguments))
+			result, err := tool.Execute(context.Background(), call.Args)
 			if err != nil {
-				results[i].Error = fmt.Errorf("error executing tool %s: %w", call.Function.Name, err)
+				results[i].Error = fmt.Errorf("error executing tool %s: %w", call.Name, err)
 				return
 			}
 
@@ -216,69 +202,53 @@ func (b *BaseAgent) handleToolCalls(toolCalls []openai.ToolCall) error {
 
 	wg.Wait()
 
-	// Process the results and detect any errors.
 	for _, r := range results {
 		if r.Error != nil {
 			return r.Error
 		}
-
 		b.mutex.Lock()
-		b.memory.Add(openai.ChatCompletionMessage{
-			Role:       openai.ChatMessageRoleTool,
-			Content:    r.Content,
-			Name:       r.Name,
-			ToolCallID: r.CallID,
+		b.memory.Add(Message{
+			Role:    RoleTool,
+			Content: r.Content,
+			Name:    r.Name,
 		})
 		b.mutex.Unlock()
 	}
-
 	return nil
 }
 
 // prepareMessages compiles the messages to be sent to the API, including the system prompt and conversation memory.
-func (a *BaseAgent) prepareMessages() []openai.ChatCompletionMessage {
-	messages := []openai.ChatCompletionMessage{}
-	if a.systemPrompt != "" {
-		messages = append(messages, openai.ChatCompletionMessage{
-			Role:    getSystemRole(a.model),
-			Content: a.systemPrompt,
+func (b *BaseAgent) prepareMessages() []Message {
+	var msgs []Message
+	if b.systemPrompt != "" {
+		msgs = append(msgs, Message{
+			Role:    getSystemRole(b.model),
+			Content: b.systemPrompt,
 		})
 	}
-	messages = append(messages, a.memory.Get()...)
-	return messages
+	msgs = append(msgs, b.memory.Get()...)
+	return msgs
 }
 
 // prepareTools compiles the list of tools to be included in the API request.
-func (a *BaseAgent) prepareTools() []openai.Tool {
-	toolsList := []openai.Tool{}
-	for _, tool := range a.tools {
-		toolsList = append(toolsList, openai.Tool{
-			Type:     openai.ToolTypeFunction,
-			Function: tool.GetDefinition(),
-		})
+func (b *BaseAgent) prepareTools() []ToolDefinition {
+	var defs []ToolDefinition
+	for _, tool := range b.tools {
+		defs = append(defs, tool.GetDefinition())
 	}
-	return toolsList
-}
-
-// AgentConfig holds configuration parameters for creating an agent instance.
-type AgentConfig struct {
-	Client       *openai.Client
-	Name         string
-	SystemPrompt string
-	Memory       Memory
-	Model        string
+	return defs
 }
 
 // AgentBuilder provides a fluent, modular way to configure and construct an Agent.
 type AgentBuilder struct {
-	client         *openai.Client
+	client         LLMClient
 	name           string
 	systemPrompt   string
 	memory         Memory
 	model          string
 	tools          map[string]Tool
 	temperature    float32
-	responseFormat *openai.ChatCompletionResponseFormat
+	responseFormat *ResponseFormat
 	buildError     error
 }
 
@@ -291,26 +261,33 @@ func NewAgentBuilder() *AgentBuilder {
 
 // SetJSONResponseFormat configures the agent to use a JSON schema for response formatting,
 // generating the schema from a provided sample type.
-func (b *AgentBuilder) SetJSONResponseFormat(typeSample any) *AgentBuilder {
-	schema, err := GenerateSchema(typeSample)
+func (b *AgentBuilder) SetJSONResponseFormat(schemaName string, structSchema any) *AgentBuilder {
+	schemaDef, err := GenerateSchema(structSchema) // Assumes GenerateSchema returns a json.RawMessage
 	if err != nil {
 		b.buildError = fmt.Errorf("error generating schema: %w", err)
 		return b
 	}
 
-	b.responseFormat = &openai.ChatCompletionResponseFormat{
-		Type: openai.ChatCompletionResponseFormatTypeJSONSchema,
-		JSONSchema: &openai.ChatCompletionResponseFormatJSONSchema{
-			Schema: schema,
+	// Marshal the tool definition into a json.RawMessage.
+	rawSchema, err := json.Marshal(schemaDef)
+	if err != nil {
+		b.buildError = fmt.Errorf("error marshalling schema: %w", err)
+		return b
+	}
+
+	b.responseFormat = &ResponseFormat{
+		Type: "json_schema",
+		JSONSchema: &JSONSchema{
+			Name:   schemaName,
+			Schema: rawSchema,
 			Strict: true,
 		},
 	}
-
 	return b
 }
 
-// SetClient sets the OpenAI client to be used by the agent.
-func (b *AgentBuilder) SetClient(client *openai.Client) *AgentBuilder {
+// SetClient sets the LLMClient to be used by the agent.
+func (b *AgentBuilder) SetClient(client LLMClient) *AgentBuilder {
 	b.client = client
 	return b
 }
@@ -354,7 +331,7 @@ func (b *AgentBuilder) AddTool(tool Tool) *AgentBuilder {
 
 // Build constructs and returns an Agent based on the current configuration.
 // It returns an error if any issues occurred during the builder setup.
-func (b *AgentBuilder) Build() (Agent, error) {
+func (b *AgentBuilder) Build() (*BaseAgent, error) {
 	if b.buildError != nil {
 		return nil, b.buildError
 	}

@@ -11,7 +11,7 @@ import (
 
 func main() {
 	// Initialize the OpenAI client with your API key.
-	client := openai.NewClient("YOUR_OPENAI_API_KEY")
+	client := gokamy.NewOpenAIClient("YOUR_OPENAI_API_KEY")
 
 	// Create a simple memory instance.
 	memory := gokamy.NewSimpleMemory()

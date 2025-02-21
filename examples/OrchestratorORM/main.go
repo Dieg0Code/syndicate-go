@@ -13,12 +13,12 @@ import (
 // CustomMemory is a custom implementation of the Memory interface.
 // It wraps a simple in-memory slice and logs each message addition.
 type CustomMemory struct {
-	messages []openai.ChatCompletionMessage
+	messages []gokamy.Message
 	mutex    sync.RWMutex
 }
 
 // Add adds a message to the custom memory.
-func (m *CustomMemory) Add(message openai.ChatCompletionMessage) {
+func (m *CustomMemory) Add(message gokamy.Message) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	fmt.Println("CustomMemory - Adding message:", message)
@@ -26,10 +26,10 @@ func (m *CustomMemory) Add(message openai.ChatCompletionMessage) {
 }
 
 // Get returns all messages stored in the custom memory.
-func (m *CustomMemory) Get() []openai.ChatCompletionMessage {
+func (m *CustomMemory) Get() []gokamy.Message {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
-	copied := make([]openai.ChatCompletionMessage, len(m.messages))
+	copied := make([]gokamy.Message, len(m.messages))
 	copy(copied, m.messages)
 	return copied
 }
@@ -38,19 +38,19 @@ func (m *CustomMemory) Get() []openai.ChatCompletionMessage {
 func (m *CustomMemory) Clear() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	m.messages = []openai.ChatCompletionMessage{}
+	m.messages = []gokamy.Message{}
 }
 
 // NewCustomMemory returns a new instance of Memory interface backed by CustomMemory.
 func NewCustomMemory() gokamy.Memory {
 	return &CustomMemory{
-		messages: make([]openai.ChatCompletionMessage, 0),
+		messages: make([]gokamy.Message, 0),
 	}
 }
 
 func main() {
 	// Initialize the OpenAI client using your API key.
-	client := openai.NewClient("YOUR_API_KEY")
+	client := gokamy.NewOpenAIClient("YOUR_API_KEY")
 
 	// Use the custom memory implementation.
 	customMemory := NewCustomMemory()
