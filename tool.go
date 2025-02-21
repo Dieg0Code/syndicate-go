@@ -6,18 +6,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-
-	openai "github.com/sashabaranov/go-openai"
 )
-
-// Tool defines the interface for tools that can be integrated into the system.
-// A tool must provide its function definition and implement an execution method.
-type Tool interface {
-	// GetDefinition returns the function definition for the tool.
-	GetDefinition() *openai.FunctionDefinition
-	// Execute runs the tool with the provided arguments (in JSON format) and returns the result.
-	Execute(args json.RawMessage) (any, error)
-}
 
 // DataType represents a JSON data type in the generated schema.
 type DataType string

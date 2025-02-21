@@ -2,17 +2,15 @@ package gokamy
 
 import (
 	"sync"
-
-	openai "github.com/sashabaranov/go-openai"
 )
 
 // Memory defines the interface for managing a history of chat messages.
 // It provides methods for adding messages, retrieving the complete history, and clearing the history.
 type Memory interface {
 	// Add appends a complete ChatCompletionMessage to the memory.
-	Add(message openai.ChatCompletionMessage)
+	Add(message Message)
 	// Get returns a copy of all stored chat messages.
-	Get() []openai.ChatCompletionMessage
+	Get() []Message
 	// Clear removes all stored chat messages from memory.
 	Clear()
 }
@@ -20,12 +18,12 @@ type Memory interface {
 // SimpleMemory implements a basic in-memory storage for chat messages.
 // It uses a slice to store messages and a RWMutex for safe concurrent access.
 type SimpleMemory struct {
-	messages []openai.ChatCompletionMessage // Slice holding the chat messages.
-	mutex    sync.RWMutex                   // RWMutex to ensure thread-safe access to messages.
+	messages []Message    // Slice holding the chat messages.
+	mutex    sync.RWMutex // RWMutex to ensure thread-safe access to messages.
 }
 
 // Add appends a complete chat message to the SimpleMemory.
-func (s *SimpleMemory) Add(message openai.ChatCompletionMessage) {
+func (s *SimpleMemory) Add(message Message) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.messages = append(s.messages, message)
@@ -35,16 +33,16 @@ func (s *SimpleMemory) Add(message openai.ChatCompletionMessage) {
 func (s *SimpleMemory) Clear() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	s.messages = make([]openai.ChatCompletionMessage, 0)
+	s.messages = make([]Message, 0)
 }
 
 // Get returns a copy of all stored chat messages to avoid data races.
 // A copy of the messages slice is returned to ensure that external modifications
 // do not affect the internal state.
-func (s *SimpleMemory) Get() []openai.ChatCompletionMessage {
+func (s *SimpleMemory) Get() []Message {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
-	copyMessages := make([]openai.ChatCompletionMessage, len(s.messages))
+	copyMessages := make([]Message, len(s.messages))
 	copy(copyMessages, s.messages)
 	return copyMessages
 }
@@ -53,6 +51,6 @@ func (s *SimpleMemory) Get() []openai.ChatCompletionMessage {
 // It initializes the internal message slice and ensures the memory is ready for use.
 func NewSimpleMemory() Memory {
 	return &SimpleMemory{
-		messages: make([]openai.ChatCompletionMessage, 0),
+		messages: make([]Message, 0),
 	}
 }
