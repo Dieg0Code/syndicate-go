@@ -7,11 +7,11 @@
   [![Go Report Card](https://goreportcard.com/badge/github.com/Dieg0Code/gokamy-ai)](https://goreportcard.com/report/github.com/Dieg0Code/gokamy-ai)
   [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/Dieg0Code/gokamy-ai/ci.yml?branch=main)](https://github.com/Dieg0Code/gokamy-ai/actions)
   [![GoDoc](https://godoc.org/github.com/Dieg0Code/gokamy-ai?status.svg)](https://pkg.go.dev/github.com/Dieg0Code/gokamy-ai)
-  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+  [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
   [![Release](https://img.shields.io/github/v/release/Dieg0Code/gokamy-ai)](https://github.com/Dieg0Code/gokamy-ai/releases)
 </div>
 
-Built on top of the [sashabaranov/go-openai](https://github.com/sashabaranov/go-openai) library, Gokamy SDK is a lightweight, flexible, and extensible toolkit for building intelligent conversational agents in Golang. It enables you to create agents, engineer prompts, generate tool schemas, manage memory, and orchestrate complex workflows—making it easy to integrate advanced AI capabilities into your projects. 🚀
+Gokamy SDK is a lightweight, flexible, and extensible toolkit for building intelligent conversational agents in Golang. It enables you to create agents, engineer prompts, generate tool schemas, manage memory, and orchestrate complex workflows—making it easy to integrate advanced AI capabilities into your projects. 🚀
 
 ## Features
 
@@ -223,7 +223,7 @@ import (
     "log"
     "time"
 
-    gomaky "github.com/Dieg0Code/gokamy"
+    gomaky "github.com/Dieg0Code/gokamy-ai"
     openai "github.com/sashabaranov/go-openai"
     
     "gorm.io/driver/postgres"
@@ -268,6 +268,7 @@ func (m *ORMMemory) Get() []openai.ChatCompletionMessage {
 			Content: msg.Content,
 		})
 	}
+	return chatMessages
 }
 
 // Clear removes all messages from the persistent memory.
@@ -351,8 +352,7 @@ func main() {
 <details>
   <summary><strong>Advanced Configuration: Temperature and JSON Response Format</strong></summary>
 
-
-You can configure the behavior of your agent by configuring parameters such as temperature and JSON response format. The following example demonstrates how to set these options using the AgentBuilder:
+You can configure the behavior of your agent by setting parameters such as temperature and JSON response format. The following example demonstrates how to set these options using the AgentBuilder:
 
 ```go
 package main
@@ -415,7 +415,6 @@ func main() {
 	fmt.Printf("Message: %s\n", parsedResponse.Message)
 	fmt.Printf("Code: %d\n", parsedResponse.Code)
 }
-
 ```
 </details>
 
@@ -430,10 +429,20 @@ The project is also planning a CLI tool to streamline project setup. The planned
 Stay tuned for further updates!
 </details>
 
+## Dependencies and Their Licenses
+
+This project uses the following third-party libraries:
+
+- [sashabaranov/go-openai](https://github.com/sashabaranov/go-openai) - Licensed under **Apache License 2.0**
+- [cohesion-org/deepseek-go](https://github.com/cohesion-org/deepseek-go) - Licensed under **MIT License**
+
+Please refer to their respective repositories for the full license texts.
+
 ## Contributing
 
 Contributions are welcome! Feel free to open issues or submit pull requests on [GitHub](https://github.com/Dieg0Code/gokamy-ai).
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the **Apache License 2.0**.  
+See [LICENSE](https://opensource.org/licenses/Apache-2.0) for more details.
