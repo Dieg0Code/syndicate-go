@@ -49,12 +49,76 @@ func (d *Definition) MarshalJSON() ([]byte, error) {
 }
 
 // GenerateRawSchema wraps GenerateSchema and returns the JSON marshalled schema.
+// Before marshalling, it validates the generated schema using ValidateDefinition.
 func GenerateRawSchema(v any) (json.RawMessage, error) {
 	def, err := generateSchema(v)
 	if err != nil {
 		return nil, err
 	}
+	// Validate the generated schema internally.
+	if err := ValidateDefinition(def); err != nil {
+		return nil, fmt.Errorf("invalid schema: %w", err)
+	}
 	return json.Marshal(def)
+}
+
+// ValidateDefinition recursively validates the generated JSON Schema definition.
+// It ensures that required fields exist, arrays have items defined,
+// that enum values are not empty, and that if AdditionalProperties is set,
+// it conforms to accepted types (bool, Definition, or *Definition).
+func ValidateDefinition(def *Definition) error {
+	switch def.Type {
+	case Object:
+		// Ensure that each required field exists in the Properties map.
+		for _, req := range def.Required {
+			if _, ok := def.Properties[req]; !ok {
+				return fmt.Errorf("required field '%s' not defined in properties", req)
+			}
+		}
+		// Recursively validate each property.
+		for name, prop := range def.Properties {
+			if err := ValidateDefinition(&prop); err != nil {
+				return fmt.Errorf("invalid property '%s': %w", name, err)
+			}
+		}
+		// Validate AdditionalProperties if set.
+		if def.AdditionalProperties != nil {
+			switch v := def.AdditionalProperties.(type) {
+			case bool:
+				// Valid – additional properties are either allowed or not.
+			case Definition:
+				if err := ValidateDefinition(&v); err != nil {
+					return fmt.Errorf("invalid AdditionalProperties definition: %w", err)
+				}
+			case *Definition:
+				if err := ValidateDefinition(v); err != nil {
+					return fmt.Errorf("invalid AdditionalProperties definition: %w", err)
+				}
+			default:
+				return fmt.Errorf("unsupported type for AdditionalProperties: %T", v)
+			}
+		}
+	case Array:
+		// Arrays must define the Items field.
+		if def.Items == nil {
+			return fmt.Errorf("array type must define 'items'")
+		}
+		if err := ValidateDefinition(def.Items); err != nil {
+			return fmt.Errorf("invalid array items: %w", err)
+		}
+	case String, Number, Integer, Boolean, Null:
+		// For primitive types, validate that if enum is defined, none of the values are empty.
+		if len(def.Enum) > 0 {
+			for i, enumVal := range def.Enum {
+				if strings.TrimSpace(enumVal) == "" {
+					return fmt.Errorf("enum defined but value at position %d is empty", i)
+				}
+			}
+		}
+	default:
+		return fmt.Errorf("unsupported schema type '%s'", def.Type)
+	}
+	return nil
 }
 
 // GenerateSchema generates a JSON schema Definition for the given value.
@@ -94,7 +158,7 @@ func reflectSchema(t reflect.Type) (*Definition, error) {
 		}
 		d = *objDef
 	case reflect.Ptr:
-		// Dereference pointers and generate schema for the underlying type.
+		// Dereference pointer and generate schema for the underlying type.
 		definition, err := reflectSchema(t.Elem())
 		if err != nil {
 			return nil, err
@@ -105,7 +169,7 @@ func reflectSchema(t reflect.Type) (*Definition, error) {
 		reflect.UnsafePointer:
 		return nil, fmt.Errorf("unsupported type: %s", t.Kind().String())
 	default:
-		// A default case for unexpected types can be defined if required.
+		// Handle other unexpected types if necessary.
 	}
 	return &d, nil
 }
@@ -140,7 +204,7 @@ func processField(field reflect.StructField) (jsonTag string, schema *Definition
 		return "", nil, false, err
 	}
 
-	// Assign the description if provided.
+	// Set the description if provided via the tag.
 	if description := strings.TrimSpace(field.Tag.Get("description")); description != "" {
 		schema.Description = description
 	}
@@ -158,7 +222,7 @@ func processField(field reflect.StructField) (jsonTag string, schema *Definition
 		}
 	}
 
-	// Allow overriding the default required value using the "required" tag.
+	// Override the default required value using the "required" tag if provided.
 	if reqTag := field.Tag.Get("required"); reqTag != "" {
 		if parsed, pErr := strconv.ParseBool(reqTag); pErr == nil {
 			required = parsed
@@ -190,7 +254,7 @@ func reflectSchemaObject(t reflect.Type) (*Definition, error) {
 		if err != nil {
 			return nil, err
 		}
-		// If the JSON tag is empty, the field is omitted.
+		// Skip fields with an empty JSON tag.
 		if tag == "" {
 			continue
 		}
