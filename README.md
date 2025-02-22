@@ -51,17 +51,17 @@ import (
 
 func main() {
 	// Initialize the OpenAI client with your API key.
-	client := openai.NewClient("YOUR_OPENAI_API_KEY")
+	client := syndicate.NewOpenAIClient("YOUR_OPENAI_API_KEY")
 
 	// Create a simple memory instance.
 	memory := syndicate.NewSimpleMemory()
 
-	// Build a structured prompt using PromptBuilder to instruct the agent to respond in haiku.
+	// Build a structured prompt using PromptBuilder to instruct the agent to speak in haiku.
 	systemPrompt := syndicate.NewPromptBuilder().
 		CreateSection("Introduction").
 		AddText("Introduction", "You are an agent that always responds in haiku format.").
 		CreateSection("Guidelines").
-		AddListItem("Guidelines", "Keep responses in a three-line haiku format (5-7-5 syllables).").
+		AddListItem("Guidelines", "Keep responses to a three-line haiku format (5-7-5 syllables).").
 		AddListItem("Guidelines", "Be creative and concise.").
 		Build()
 
@@ -76,12 +76,13 @@ func main() {
 		SetMemory(memory).
 		SetModel(openai.GPT4).
 		Build()
+
 	if err != nil {
 		log.Fatalf("Error building agent: %v", err)
 	}
 
 	// Process a sample input with the agent.
-	response, err := agent.Process(context.Background(), "What is the weather like today?")
+	response, err := agent.Process(context.Background(), "Jhon Doe", "What is the weather like today?")
 	if err != nil {
 		log.Fatalf("Error processing request: %v", err)
 	}
@@ -89,6 +90,7 @@ func main() {
 	fmt.Println("\nAgent Response:")
 	fmt.Println(response)
 }
+
 ```
 
 </details>
