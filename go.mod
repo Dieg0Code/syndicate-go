@@ -1,4 +1,4 @@
-module github.com/Dieg0Code/syndicate
+module github.com/Dieg0Code/syndicate/v2
 
 go 1.24.0
 
