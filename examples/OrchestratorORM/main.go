@@ -6,19 +6,19 @@ import (
 	"log"
 	"sync"
 
-	gokamy "github.com/Dieg0Code/gokamy-ai"
+	syndicate "github.com/Dieg0Code/syndicate"
 	openai "github.com/sashabaranov/go-openai"
 )
 
 // CustomMemory is a custom implementation of the Memory interface.
 // It wraps a simple in-memory slice and logs each message addition.
 type CustomMemory struct {
-	messages []gokamy.Message
+	messages []syndicate.Message
 	mutex    sync.RWMutex
 }
 
 // Add adds a message to the custom memory.
-func (m *CustomMemory) Add(message gokamy.Message) {
+func (m *CustomMemory) Add(message syndicate.Message) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	fmt.Println("CustomMemory - Adding message:", message)
@@ -26,10 +26,10 @@ func (m *CustomMemory) Add(message gokamy.Message) {
 }
 
 // Get returns all messages stored in the custom memory.
-func (m *CustomMemory) Get() []gokamy.Message {
+func (m *CustomMemory) Get() []syndicate.Message {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
-	copied := make([]gokamy.Message, len(m.messages))
+	copied := make([]syndicate.Message, len(m.messages))
 	copy(copied, m.messages)
 	return copied
 }
@@ -38,25 +38,25 @@ func (m *CustomMemory) Get() []gokamy.Message {
 func (m *CustomMemory) Clear() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	m.messages = []gokamy.Message{}
+	m.messages = []syndicate.Message{}
 }
 
 // NewCustomMemory returns a new instance of Memory interface backed by CustomMemory.
-func NewCustomMemory() gokamy.Memory {
+func NewCustomMemory() syndicate.Memory {
 	return &CustomMemory{
-		messages: make([]gokamy.Message, 0),
+		messages: make([]syndicate.Message, 0),
 	}
 }
 
 func main() {
 	// Initialize the OpenAI client using your API key.
-	client := gokamy.NewOpenAIClient("YOUR_API_KEY")
+	client := syndicate.NewOpenAIClient("YOUR_API_KEY")
 
 	// Use the custom memory implementation.
 	customMemory := NewCustomMemory()
 
 	// Build an agent that uses CustomMemory.
-	agent, err := gokamy.NewAgentBuilder().
+	agent, err := syndicate.NewAgentBuilder().
 		SetClient(client).
 		SetName("CustomMemoryAgent").
 		SetConfigPrompt("You are an agent that logs all messages to a custom memory implementation.").

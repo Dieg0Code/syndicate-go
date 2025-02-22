@@ -1,4 +1,4 @@
-package gokamy
+package syndicate
 
 import (
 	"context"
@@ -35,9 +35,10 @@ func mapToOpenAIMessages(messages []Message) []openai.ChatCompletionMessage {
 	var msgs []openai.ChatCompletionMessage
 	for _, m := range messages {
 		msgs = append(msgs, openai.ChatCompletionMessage{
-			Role:    m.Role,
-			Name:    m.Name,
-			Content: m.Content,
+			Role:       m.Role,
+			Name:       m.Name,
+			Content:    m.Content,
+			ToolCallID: m.ToolID,
 		})
 	}
 	return msgs

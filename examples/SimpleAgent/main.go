@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"log"
 
-	gokamy "github.com/Dieg0Code/gokamy-ai"
+	syndicate "github.com/Dieg0Code/syndicate"
 	openai "github.com/sashabaranov/go-openai"
 )
 
 func main() {
 	// Initialize the OpenAI client with your API key.
-	client := gokamy.NewOpenAIClient("YOUR_OPENAI_API_KEY")
+	client := syndicate.NewOpenAIClient("YOUR_OPENAI_API_KEY")
 
 	// Create a simple memory instance.
-	memory := gokamy.NewSimpleMemory()
+	memory := syndicate.NewSimpleMemory()
 
 	// Build a structured prompt using PromptBuilder to instruct the agent to speak in haiku.
-	systemPrompt := gokamy.NewPromptBuilder().
+	systemPrompt := syndicate.NewPromptBuilder().
 		CreateSection("Introduction").
 		AddText("Introduction", "You are an agent that always responds in haiku format.").
 		CreateSection("Guidelines").
@@ -29,7 +29,7 @@ func main() {
 	fmt.Println(systemPrompt)
 
 	// Build the agent using AgentBuilder.
-	agent, err := gokamy.NewAgentBuilder().
+	agent, err := syndicate.NewAgentBuilder().
 		SetClient(client).
 		SetName("HaikuAgent").
 		SetConfigPrompt(systemPrompt).

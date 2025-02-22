@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	gokamy "github.com/Dieg0Code/gokamy-ai"
+	syndicate "github.com/Dieg0Code/syndicate"
 )
 
 type MenuItemSchema struct {
@@ -31,12 +31,12 @@ type Product struct {
 }
 
 func main() {
-	schema, err := gokamy.GenerateRawSchema(Product{})
+	schema, err := syndicate.GenerateRawSchema(Product{})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	schema2, err := gokamy.GenerateRawSchema(UserOrderFunctionSchema{})
+	schema2, err := syndicate.GenerateRawSchema(UserOrderFunctionSchema{})
 	if err != nil {
 		log.Fatal(err)
 	}

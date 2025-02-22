@@ -1,6 +1,6 @@
-// Package gokamy provides an SDK for interfacing with OpenAI's API,
+// Package syndicate provides an SDK for interfacing with OpenAI's API,
 // offering agents that process inputs, manage tool execution, and maintain memory.
-package gokamy
+package syndicate
 
 import (
 	"context"

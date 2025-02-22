@@ -1,4 +1,4 @@
-package gokamy
+package syndicate
 
 import (
 	"encoding/json"

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	gokamy "github.com/Dieg0Code/gokamy-ai"
+	syndicate "github.com/Dieg0Code/syndicate"
 	"github.com/sashabaranov/go-openai"
 )
 
@@ -15,7 +15,7 @@ func main() {
 	client := openai.NewClient(apiKey)
 
 	// Build the Embedder using the builder.
-	embedder, err := gokamy.NewEmbedderBuilder().
+	embedder, err := syndicate.NewEmbedderBuilder().
 		SetClient(client).
 		// Optionally, set a different model by uncommenting the next line:
 		// SetModel(openai.SmallEmbedding3).

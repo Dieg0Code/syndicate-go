@@ -5,20 +5,20 @@ import (
 	"fmt"
 	"log"
 
-	gokamy "github.com/Dieg0Code/gokamy-ai"
+	syndicate "github.com/Dieg0Code/syndicate"
 	openai "github.com/sashabaranov/go-openai"
 )
 
 func main() {
 	// Initialize the OpenAI client using your API key.
-	client := gokamy.NewOpenAIClient("YOUR_API_KEY")
+	client := syndicate.NewOpenAIClient("YOUR_API_KEY")
 
 	// Create simple memory instances for each agent.
-	memoryAgentOne := gokamy.NewSimpleMemory()
-	memoryAgentTwo := gokamy.NewSimpleMemory()
+	memoryAgentOne := syndicate.NewSimpleMemory()
+	memoryAgentTwo := syndicate.NewSimpleMemory()
 
 	// Build the first agent (HelloAgent).
-	agentOne, err := gokamy.NewAgentBuilder().
+	agentOne, err := syndicate.NewAgentBuilder().
 		SetClient(client).
 		SetName("HelloAgent").
 		SetConfigPrompt("You are an agent that warmly greets users and encourages further interaction.").
@@ -30,7 +30,7 @@ func main() {
 	}
 
 	// Build the second agent (FinalAgent).
-	agentTwo, err := gokamy.NewAgentBuilder().
+	agentTwo, err := syndicate.NewAgentBuilder().
 		SetClient(client).
 		SetName("FinalAgent").
 		SetConfigPrompt("You are an agent that provides a final summary based on the conversation.").
@@ -42,7 +42,7 @@ func main() {
 	}
 
 	// Create an orchestrator, register both agents, and define the execution sequence.
-	orchestrator := gokamy.NewOrchestratorBuilder().
+	orchestrator := syndicate.NewOrchestratorBuilder().
 		AddAgent(agentOne).
 		AddAgent(agentTwo).
 		// Define the processing sequence: first HelloAgent, then FinalAgent.
