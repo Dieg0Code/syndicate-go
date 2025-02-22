@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	syndicate "github.com/Dieg0Code/syndicate"
+	syndicate "github.com/Dieg0Code/syndicate-go"
 )
 
 // User represents a user profile that might come from a database.

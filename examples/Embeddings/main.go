@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	syndicate "github.com/Dieg0Code/syndicate"
+	syndicate "github.com/Dieg0Code/syndicate-go"
 	"github.com/sashabaranov/go-openai"
 )
 
