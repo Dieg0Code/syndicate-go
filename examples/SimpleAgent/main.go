@@ -29,7 +29,7 @@ func main() {
 	fmt.Println(systemPrompt)
 
 	// Build the agent using AgentBuilder.
-	agent, err := syndicate.NewAgentBuilder().
+	agent, err := syndicate.NewAgent().
 		SetClient(client).
 		SetName("HaikuAgent").
 		SetConfigPrompt(systemPrompt).

@@ -254,7 +254,7 @@ type AgentBuilder struct {
 }
 
 // NewAgentBuilder initializes and returns a new instance of AgentBuilder.
-func NewAgentBuilder() *AgentBuilder {
+func NewAgent() *AgentBuilder {
 	return &AgentBuilder{
 		tools: make(map[string]Tool),
 	}
@@ -316,8 +316,8 @@ func (b *AgentBuilder) SetTemperature(temperature float32) *AgentBuilder {
 	return b
 }
 
-// AddTool adds a tool to the agent's configuration, making it available during processing.
-func (b *AgentBuilder) AddTool(tool Tool) *AgentBuilder {
+// EquipTool adds a tool to the operative's configuration, making it available during processing.
+func (b *AgentBuilder) EquipTool(tool Tool) *AgentBuilder {
 	def := tool.GetDefinition()
 	b.tools[def.Name] = tool
 	return b

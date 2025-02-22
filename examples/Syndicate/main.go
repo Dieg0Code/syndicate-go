@@ -18,7 +18,7 @@ func main() {
 	memoryAgentTwo := syndicate.NewSimpleMemory()
 
 	// Build the first agent (HelloAgent).
-	agentOne, err := syndicate.NewAgentBuilder().
+	agentOne, err := syndicate.NewAgent().
 		SetClient(client).
 		SetName("HelloAgent").
 		SetConfigPrompt("You are an agent that warmly greets users and encourages further interaction.").
@@ -30,7 +30,7 @@ func main() {
 	}
 
 	// Build the second agent (FinalAgent).
-	agentTwo, err := syndicate.NewAgentBuilder().
+	agentTwo, err := syndicate.NewAgent().
 		SetClient(client).
 		SetName("FinalAgent").
 		SetConfigPrompt("You are an agent that provides a final summary based on the conversation.").
@@ -41,24 +41,24 @@ func main() {
 		log.Fatalf("Error building FinalAgent: %v", err)
 	}
 
-	// Create an orchestrator, register both agents, and define the execution sequence.
-	orchestrator := syndicate.NewOrchestratorBuilder().
-		AddAgent(agentOne).
-		AddAgent(agentTwo).
-		// Define the processing sequence: first HelloAgent, then FinalAgent.
-		SetSequence([]string{"HelloAgent", "FinalAgent"}).
+	// Create a syndicate, recruit both agents, and define the execution pipeline.
+	syndicateSystem := syndicate.NewSyndicate().
+		RecruitAgent(agentOne).
+		RecruitAgent(agentTwo).
+		// Define the processing pipeline: first HelloAgent, then FinalAgent.
+		DefinePipeline([]string{"HelloAgent", "FinalAgent"}).
 		Build()
 
 	// User name for the conversation.
 	userName := "User"
 
-	// Provide an input and process the sequence.
+	// Provide an input and process the pipeline.
 	input := "Please greet the user and provide a summary."
-	response, err := orchestrator.ProcessSequence(context.Background(), userName, input)
+	response, err := syndicateSystem.ExecutePipeline(context.Background(), userName, input)
 	if err != nil {
-		log.Fatalf("Error processing sequence: %v", err)
+		log.Fatalf("Error processing pipeline: %v", err)
 	}
 
-	fmt.Println("Final Orchestrator Response:")
+	fmt.Println("Final Syndicate Response:")
 	fmt.Println(response)
 }

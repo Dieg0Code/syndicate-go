@@ -56,7 +56,7 @@ func main() {
 	customMemory := NewCustomMemory()
 
 	// Build an agent that uses CustomMemory.
-	agent, err := syndicate.NewAgentBuilder().
+	agent, err := syndicate.NewAgent().
 		SetClient(client).
 		SetName("CustomMemoryAgent").
 		SetConfigPrompt("You are an agent that logs all messages to a custom memory implementation.").
