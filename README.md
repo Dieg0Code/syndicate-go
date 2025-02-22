@@ -1,5 +1,3 @@
-# Syndicate
-
 <div align="center">
   <img src="https://i.imgur.com/e608zH3.png" alt="Syndicate SDK Logo" width="700"/>
 
