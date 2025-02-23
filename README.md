@@ -23,7 +23,7 @@ Syndicate SDK is a lightweight, flexible, and extensible toolkit for building in
 - **Prompt Engineering 📝:** Create structured prompts with nested sections for improved clarity.
 - **Tool Schemas 🔧:** Generate JSON schemas from Go structures to define tools and validate user inputs.
 - **Memory Implementations 🧠:** Use built-in SimpleMemory or implement your own memory storage that adheres to the Memory interface.
-- **Orchestrator 🎧:** Manage multiple agents and execute them in a predefined sequence to achieve complex workflows.
+- **Syndicate 🦾:** Manage multiple agents and execute them in a predefined sequence to achieve complex workflows.
 - **Extendable 🔐:** The SDK is designed to be unopinionated, allowing seamless integration into your projects.
 
 ## Installation
