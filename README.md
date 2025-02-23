@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://i.imgur.com/e608zH3.png" alt="Syndicate SDK Logo" width="700"/>
+  <img src="https://i.imgur.com/e608zH3.png" alt="Syndicate SDK Logo"/>
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/Dieg0Code/syndicate-go)](https://goreportcard.com/report/github.com/Dieg0Code/syndicate-go)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/Dieg0Code/syndicate-go/ci.yml?branch=main)](https://github.com/Dieg0Code/syndicate-go/actions)
