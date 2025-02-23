@@ -9,7 +9,7 @@
 [![Release](https://img.shields.io/github/v/release/Dieg0Code/syndicate-go)](https://github.com/Dieg0Code/syndicate-go/releases)
 </div>
 
-Syndicate SDK is a powerful, agile, and extensible toolkit for crafting intelligent conversational agents in Golang. Designed with both flexibility and simplicity in mind, it empowers developers to build AI-driven agents capable of sophisticated prompt engineering, seamless tool integration, dynamic memory management, and orchestration of complex workflows. Whether you're prototyping or building production-grade solutions, Syndicate SDK lets you unleash the full potential of conversational AI with a lightweight framework that’s both hacker-friendly and enterprise-ready. 🚀
+Syndicate SDK is a powerful, agile, and extensible toolkit for crafting intelligent conversational agents in Golang. Designed with both flexibility and simplicity in mind, it empowers developers to build AI-driven agents capable of sophisticated prompt engineering, seamless tool integration, dynamic memory management, and orchestrating complex workflows. Whether you're prototyping or building production-grade solutions, Syndicate SDK lets you unleash the full potential of conversational AI with a lightweight framework that’s both hacker-friendly and enterprise-ready. 🚀
 
 ---
 
@@ -19,14 +19,95 @@ For a complete summary of the SDK features, head over to our 👉 [Quick Guide](
 
 ---
 
-## Features
+## Conceptual Overview & Features
 
-- **Agent Management 🤖:** Easily build and configure agents with custom prompts, tools, and memory.
-- **Prompt Engineering 📝:** Create structured prompts with nested sections for improved clarity.
-- **Tool Schemas 🔧:** Generate JSON schemas from Go structures to define tools and validate inputs.
-- **Memory Implementations 🧠:** Use a built-in SimpleMemory or implement your own storage adhering to the Memory interface.
-- **Syndicate 🦾:** Manage multiple agents and execute them in a predetermined sequence to perform advanced workflows.
-- **Extendable 🔐:** The SDK is unopinionated, allowing seamless integration into your projects.
+### **Agent Management 🤖**
+
+_What it is:_  
+Agents are the core of the Syndicate SDK. They are self-contained AI entities, each with its own personality, knowledge, and optional tools.
+
+_Why it's useful:_
+
+- **Customization:** Tailor each agent's behavior and configuration using custom system prompts.
+- **Scalability:** Easily add or modify agents based on evolving requirements.
+- **Modularity:** Agents can be combined to form complex workflows (pipelines) that mirror real-world processes.
+
+_Example:_ Use one agent to process an order, and another to provide a summary—each handling different tasks for a comprehensive experience! 😄
+
+---
+
+### **Prompt Engineering 📝**
+
+_What it is:_  
+Prompt engineering involves crafting detailed and structured instructions that govern how agents respond.
+
+_Why it's useful:_
+
+- **Clarity:** Creating nested sections and structured prompts ensures the agent clearly understands its role.
+- **Consistency:** Maintain a standard set of behaviors and responses, which is crucial for reliability in production scenarios.
+- **Adaptability:** Easily update prompts to adapt to new requirements or contextual changes.
+
+_Fun fact:_ This helps guide the AI to focus on specific details, ensuring conversations stay on point! ✨
+
+---
+
+### **Tool Schemas 🔧**
+
+_What it is:_  
+Tool schemas are generated JSON definitions from Go structures. They describe how external tools interact with the agents.
+
+_Why it's useful:_
+
+- **Validation:** Automatically validates inputs, ensuring only correct and safe data is passed to tools.
+- **Integration:** Seamlessly integrates with external services or databases to perform specialized tasks.
+- **Automation:** Reduces manual configuration, making development faster and less error-prone.
+
+_Imagine:_ Your agent can now reliably call external services with a clearly defined contract! 💡
+
+---
+
+### **Memory Implementations 🧠**
+
+_What it is:_  
+Memory components allow agents to record, retrieve, and clear conversational context. This can be as simple as an in-memory store or an implementation using databases like SQLite.
+
+_Why it's useful:_
+
+- **Context Preservation:** Maintain important details across multiple interactions, helping agents provide more informed answers.
+- **Customization:** Developers can implement custom memory solutions to match performance or persistence requirements.
+- **Scalability:** Enhances the conversational flow by keeping track of conversation history.
+
+_For example:_ Using a custom memory lets you record previous orders or context for follow-up questions! 📚
+
+---
+
+### **Syndicate (Orchestrator) 🦾**
+
+_What it is:_  
+Syndicate is the engine that recruits agents and establishes pipelines—dictating the order in which agents perform tasks.
+
+_Why it's useful:_
+
+- **Workflow Management:** Orchestrate complex processes by chaining multiple agents together.
+- **Simplicity:** Simplifies the process of switching between agents or forming multi-step conversations.
+- **Flexibility:** Adapt to different workflows without reworking the core logic each time.
+
+_In practice:_ Easily create pipelines where one agent processes the order and another provides a summary. Coordination made simple! 🤝
+
+---
+
+### **Extendable 🔐**
+
+_What it is:_  
+The SDK is designed to be unopinionated, meaning it can be easily integrated into a variety of projects without forcing rigid architectural decisions.
+
+_Why it's useful:_
+
+- **Flexibility:** Choose your own tools, memory implementations, and configuration strategies.
+- **Integration:** Seamlessly integrate into existing projects without major rework.
+- **Future-Proofing:** Adapt the SDK to new requirements, features, or third-party integrations.
+
+_The outcome:_ A robust toolkit that adapts to your needs whether you’re building a prototype or a production-grade system! 🔄
 
 ---
 
@@ -114,6 +195,8 @@ func (ot *OrderTool) Execute(args json.RawMessage) (interface{}, error) {
 }
 ```
 
+---
+
 ### **Step 2: Custom Memory Implementation 🧠**
 
 Implement a simple custom memory using SQLite for persisting messages:
@@ -166,6 +249,8 @@ func (m *CustomMemory) Clear() {
 	fmt.Println("Memory cleared")
 }
 ```
+
+---
 
 ### **Step 3: Building the Agents & Pipeline 🚀**
 
@@ -246,6 +331,8 @@ func main() {
 }
 ```
 
+---
+
 ### **Step 4: Run & Enjoy 🎉**
 
 1. Replace `"YOUR_OPENAI_API_KEY"` with your actual API key.
@@ -275,13 +362,12 @@ type MenuItem struct {
 	Pricing     int
 }
 
-// NewConfigPrompt generates the system prompt in XML format
+// NewConfigPrompt generates the system prompt in XML format.
 func NewConfigPrompt(name string, additionalContext MenuItem) string {
 	configPrompt := syndicate.NewPromptBuilder().
 		// Introduction section
 		CreateSection("Introduction").
 		AddText("Introduction", "You are an agent who provides detailed information about the menu, dishes, and key restaurant data using a semantic search system to enrich responses with relevant context.").
-
 		// Agent identity
 		CreateSection("Identity").
 		AddText("Identity", "This section defines your name and persona identity.").
@@ -289,7 +375,6 @@ func NewConfigPrompt(name string, additionalContext MenuItem) string {
 		AddTextF("Name", name).
 		AddSubSection("Persona", "Identity").
 		AddText("Persona", "You act as an AI assistant in the restaurant, interacting with customers in a friendly and helpful manner to improve their dining experience.").
-
 		// Capabilities and behavior
 		CreateSection("CapabilitiesAndBehavior").
 		AddListItem("CapabilitiesAndBehavior", "Respond in a clear and friendly manner, tailoring your answer to the user's query.").
@@ -298,7 +383,6 @@ func NewConfigPrompt(name string, additionalContext MenuItem) string {
 		AddListItem("CapabilitiesAndBehavior", "Be cheerful, polite, and respectful at all times; use emojis if appropriate.").
 		AddListItem("CapabilitiesAndBehavior", "Register or cancel orders but do not update them; inform the user accordingly.").
 		AddListItem("CapabilitiesAndBehavior", "Remember only the last 5 interactions with the user.").
-
 		// Additional context
 		CreateSection("AdditionalContext").
 		AddText("AdditionalContext", "This section contains additional information about the available dishes used to answer user queries based on semantic similarity.").
@@ -309,20 +393,17 @@ func NewConfigPrompt(name string, additionalContext MenuItem) string {
 		AddListItem("AdditionalContext", "Select dishes based on similarity without mentioning it explicitly.").
 		AddListItem("AdditionalContext", "Use context to enrich responses, but do not reveal it.").
 		AddListItem("AdditionalContext", "Offer only dishes available on the menu.").
-
 		// Limitations and directives
 		CreateSection("LimitationsAndDirectives").
 		AddListItem("LimitationsAndDirectives", "Do not invent data or reveal confidential information.").
 		AddListItem("LimitationsAndDirectives", "Redirect unrelated topics to relevant restaurant topics.").
 		AddListItem("LimitationsAndDirectives", "Strictly provide information only about the restaurant and its menu.").
 		AddListItem("LimitationsAndDirectives", "Offer only available menu items; do not invent dishes.").
-
 		// Response examples
 		CreateSection("ResponseExamples").
 		AddListItem("ResponseExamples", "If asked about a dish, provide details only if it is on the menu.").
 		AddListItem("ResponseExamples", "If asked for recommendations, suggest only from the available menu.").
 		AddListItem("ResponseExamples", "If asked for the menu, list only available dishes.").
-
 		// Final considerations
 		CreateSection("FinalConsiderations").
 		AddText("FinalConsiderations", "**You must follow these directives to ensure an optimal user experience, otherwise you will be dismissed.**").
@@ -343,7 +424,6 @@ func main() {
 	configPrompt := NewConfigPrompt("Bob", additionalContext)
 	fmt.Println(configPrompt)
 }
-
 ```
 
 </details>
