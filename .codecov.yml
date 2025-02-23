@@ -1,0 +1,26 @@
+# File .codecov.yml
+coverage:
+  status:
+    project:
+      default:
+        target: 80%  # Defines a minimum coverage threshold for approval
+        threshold: 2% # Allows a drop of up to 2% without failing
+    patch:
+      default:
+        target: 80%
+        threshold: 2%
+
+ignore:
+  - "examples/*"    # Ignore all content inside the examples folder
+  - "examples/**"   # Ensures all nested files are ignored
+
+comment:
+  layout: "diff, flags, files"
+  behavior: default
+
+parsers:
+  go:
+    partials_as_hits: true  # Counts partially covered lines as covered
+
+fixes:
+  - "::" # Fixes paths in reports to align with the repo structure
