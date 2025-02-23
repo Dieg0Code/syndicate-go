@@ -20,7 +20,7 @@ Syndicate SDK is a lightweight, flexible, and extensible toolkit for building in
 - **Orchestrator 🎧:** Manage multiple agents and execute them in a predefined sequence to achieve complex workflows.
 - **Extendable 🔐:** The SDK is designed to be unopinionated, allowing seamless integration into your projects.
 
-⚡ **`For a quick and comprehensive overview of the SDK, check out the [Quick Guide](https://github.com/Dieg0Code/syndicate-go/tree/main/examples/QuickGuide)`** 📚✨🔥🚀
+⚡ **For a quick and comprehensive overview of the SDK, check out the [Quick Guide](https://github.com/Dieg0Code/syndicate-go/tree/main/examples/QuickGuide)** 📚✨🔥🚀
 
 ## Installation
 
