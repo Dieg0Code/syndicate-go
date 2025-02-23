@@ -11,6 +11,12 @@
 
 Syndicate SDK is a lightweight, flexible, and extensible toolkit for building intelligent conversational agents in Golang. It enables you to create agents, engineer prompts, generate tool schemas, manage memory, and orchestrate complex workflows—making it easy to integrate advanced AI capabilities into your projects. 🚀
 
+---
+
+### ⚡ **For a quick and comprehensive overview of the SDK, check out the 👉[Quick Guide](https://github.com/Dieg0Code/syndicate-go/tree/main/examples/QuickGuide)👈** 📚✨🔥🚀
+
+---
+
 ## Features
 
 - **Agent Management 🤖:** Easily build and configure agents with custom system prompts, tools, and memory.
@@ -19,12 +25,6 @@ Syndicate SDK is a lightweight, flexible, and extensible toolkit for building in
 - **Memory Implementations 🧠:** Use built-in SimpleMemory or implement your own memory storage that adheres to the Memory interface.
 - **Orchestrator 🎧:** Manage multiple agents and execute them in a predefined sequence to achieve complex workflows.
 - **Extendable 🔐:** The SDK is designed to be unopinionated, allowing seamless integration into your projects.
-
----
-
-#### ⚡ **For a quick and comprehensive overview of the SDK, check out the 👉[Quick Guide](https://github.com/Dieg0Code/syndicate-go/tree/main/examples/QuickGuide)👈** 📚✨🔥🚀
-
----
 
 ## Installation
 
