@@ -1,31 +1,34 @@
 <div align="center">
   <img src="https://i.imgur.com/e608zH3.png" alt="Syndicate SDK Logo"/>
-
+  
 [![Go Report Card](https://goreportcard.com/badge/github.com/Dieg0Code/syndicate-go)](https://goreportcard.com/report/github.com/Dieg0Code/syndicate-go)
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/Dieg0Code/syndicate-go/ci.yml?branch=main)](https://github.com/Dieg0Code/syndicate-go/actions)
 [![codecov](https://codecov.io/github/Dieg0Code/syndicate-go/graph/badge.svg?token=FXYY1S9EP4)](https://codecov.io/github/Dieg0Code/syndicate-go)
 [![GoDoc](https://godoc.org/github.com/Dieg0Code/syndicate-go?status.svg)](https://pkg.go.dev/github.com/Dieg0Code/syndicate-go)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Release](https://img.shields.io/github/v/release/Dieg0Code/syndicate-go)](https://github.com/Dieg0Code/syndicate-go/releases)
-
 </div>
 
-Syndicate SDK is a powerful, agile, and extensible toolkit for crafting intelligent conversational agents in Golang. Designed with both flexibility and simplicity in mind, it empowers developers to build AI-driven agents capable of sophisticated prompt engineering, seamless tool integration, dynamic memory management, and orchestrating complex workflows. Whether you're prototyping or building production-grade solutions, Syndicate SDK lets you unleash the full potential of conversational AI with a lightweight framework that’s both hacker-friendly and enterprise-ready. 🚀
+Syndicate SDK is a powerful, agile, and extensible toolkit for crafting intelligent conversational agents in Golang. Designed with both flexibility and simplicity in mind, it empowers developers to build AI-driven agents capable of sophisticated prompt engineering, seamless tool integration, dynamic memory management, and orchestration of complex workflows. Whether you're prototyping or building production-grade solutions, Syndicate SDK lets you unleash the full potential of conversational AI with a lightweight framework that’s both hacker-friendly and enterprise-ready. 🚀
 
 ---
 
-### ⚡ **For a quick and comprehensive overview of the SDK, check out the 👉[Quick Guide](https://github.com/Dieg0Code/syndicate-go/tree/main/examples/QuickGuide)👈** 📚✨🔥🚀
+### ⚡ **Quick Guide Overview**
+
+For a complete summary of the SDK features, head over to our 👉 [Quick Guide](https://github.com/Dieg0Code/syndicate-go/tree/main/examples/QuickGuide) 👈 📚✨
 
 ---
 
 ## Features
 
-- **Agent Management 🤖:** Easily build and configure agents with custom system prompts, tools, and memory.
+- **Agent Management 🤖:** Easily build and configure agents with custom prompts, tools, and memory.
 - **Prompt Engineering 📝:** Create structured prompts with nested sections for improved clarity.
-- **Tool Schemas 🔧:** Generate JSON schemas from Go structures to define tools and validate user inputs.
-- **Memory Implementations 🧠:** Use built-in SimpleMemory or implement your own memory storage that adheres to the Memory interface.
-- **Syndicate 🦾:** Manage multiple agents and execute them in a predefined sequence to achieve complex workflows.
-- **Extendable 🔐:** The SDK is designed to be unopinionated, allowing seamless integration into your projects.
+- **Tool Schemas 🔧:** Generate JSON schemas from Go structures to define tools and validate inputs.
+- **Memory Implementations 🧠:** Use a built-in SimpleMemory or implement your own storage adhering to the Memory interface.
+- **Syndicate 🦾:** Manage multiple agents and execute them in a predetermined sequence to perform advanced workflows.
+- **Extendable 🔐:** The SDK is unopinionated, allowing seamless integration into your projects.
+
+---
 
 ## Installation
 
@@ -35,22 +38,146 @@ To install Syndicate SDK, use Go modules:
 go get github.com/Dieg0Code/syndicate-go
 ```
 
-Ensure that you have Go installed and configured in your development environment.
+Ensure that you have Go installed and properly configured.
 
-<details open>
-  <summary><strong>Quick Start</strong></summary>
+---
 
-Below is a simple example demonstrating how to create an agent, define a tool, and execute a pipeline using Syndicate SDK. The example simulates processing a customer order and providing a summary of the conversation.
+## Quick Start Example: Step-by-Step Instructions 😊
+
+For a hands-on demo, follow these steps to create agents, define a tool, implement custom memory, and run the processing pipeline.
+
+### **Step 1: Order Tool Implementation 🍕**
+
+1. **Define the Order Data Structures:**  
+   Create the structs `OrderItem` and `OrderSchema` to represent a customer's order.
+
+2. **Implement the Order Tool:**  
+   Create a new tool that processes the order:
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+
+	syndicate "github.com/Dieg0Code/syndicate-go"
+)
+
+// OrderItem defines a single item in a customer's order.
+type OrderItem struct {
+	ItemName string `json:"item_name" description:"Name of the menu item" required:"true"`
+	Quantity int    `json:"quantity" description:"Number of items ordered" required:"true"`
+	Price    int    `json:"price" description:"Price in cents" required:"true"`
+}
+
+// OrderSchema defines the complete order structure.
+type OrderSchema struct {
+	Items           []OrderItem `json:"items" description:"List of ordered items" required:"true"`
+	DeliveryAddress string      `json:"delivery_address" description:"Delivery address" required:"true"`
+	CustomerName    string      `json:"customer_name" description:"Customer name" required:"true"`
+	PhoneNumber     string      `json:"phone_number" description:"Customer phone number" required:"true"`
+	PaymentMethod   string      `json:"payment_method" description:"Payment method (cash or transfer)" required:"true" enum:"cash,transfer"`
+}
+
+// OrderTool simulates an order processing tool.
+type OrderTool struct{}
+
+// NewOrderTool returns a new OrderTool instance.
+func NewOrderTool() syndicate.Tool {
+	return &OrderTool{}
+}
+
+// GetDefinition generates the tool definition.
+func (ot *OrderTool) GetDefinition() syndicate.ToolDefinition {
+	schema, err := syndicate.GenerateRawSchema(OrderSchema{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	return syndicate.ToolDefinition{
+		Name:        "OrderProcessor",
+		Description: "Processes orders by saving details (items, address, customer info, and payment method).",
+		Parameters:  schema,
+		Strict:      true,
+	}
+}
+
+// Execute processes the order.
+func (ot *OrderTool) Execute(args json.RawMessage) (interface{}, error) {
+	var order OrderSchema
+	if err := json.Unmarshal(args, &order); err != nil {
+		return nil, err
+	}
+	fmt.Printf("Processing Order: %+v\n", order)
+	return "Order processed successfully", nil
+}
+```
+
+### **Step 2: Custom Memory Implementation 🧠**
+
+Implement a simple custom memory using SQLite for persisting messages:
+
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+
+	syndicate "github.com/Dieg0Code/syndicate-go"
+)
+
+// CustomMemory stores messages using SQLite.
+type CustomMemory struct {
+	db    *gorm.DB
+	mutex sync.RWMutex
+}
+
+// NewCustomMemory initializes CustomMemory with a Gorm DB.
+func NewCustomMemory(db *gorm.DB) syndicate.Memory {
+	return &CustomMemory{
+		db: db,
+	}
+}
+
+// Add saves a message.
+func (m *CustomMemory) Add(message syndicate.Message) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	fmt.Printf("Memory Add: %+v\n", message)
+	// Optionally, save to db here.
+}
+
+// Get retrieves stored messages (returns nil for simplicity).
+func (m *CustomMemory) Get() []syndicate.Message {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+	return nil
+}
+
+// Clear erases all messages.
+func (m *CustomMemory) Clear() {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	fmt.Println("Memory cleared")
+}
+```
+
+### **Step 3: Building the Agents & Pipeline 🚀**
+
+Combine everything by creating two agents (OrderAgent and SummaryAgent) and a pipeline:
 
 ```go
 package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
-	"sync"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -59,143 +186,38 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
-// --------------------------
-// Order Tool Implementation
-// --------------------------
-
-// OrderItem defines a single item in a customer's order.
-type OrderItem struct {
-	ItemName string `json:"item_name" description:"Name of the menu item" required:"true"`
-	Quantity int    `json:"quantity" description:"Number of items ordered" required:"true"`
-	Price    int    `json:"price" description:"Price of the item in cents" required:"true"`
-}
-
-// OrderSchema defines the structure for a complete order.
-type OrderSchema struct {
-	Items           []OrderItem `json:"items" description:"List of ordered items" required:"true"`
-	DeliveryAddress string      `json:"delivery_address" description:"Delivery address for the order" required:"true"`
-	CustomerName    string      `json:"customer_name" description:"Name of the customer" required:"true"`
-	PhoneNumber     string      `json:"phone_number" description:"Customer's phone number" required:"true"`
-	PaymentMethod   string      `json:"payment_method" description:"Payment method (cash or transfer)" required:"true" enum:"cash,transfer"`
-}
-
-// OrderTool implements syndicate.Tool and simulates saving an order.
-type OrderTool struct{}
-
-// NewOrderTool returns a new instance of OrderTool.
-func NewOrderTool() syndicate.Tool {
-	return &OrderTool{}
-}
-
-// GetDefinition generates the tool definition using the OrderSchema.
-func (ot *OrderTool) GetDefinition() syndicate.ToolDefinition {
-	schema, err := syndicate.GenerateRawSchema(OrderSchema{})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return syndicate.ToolDefinition{
-		Name:        "OrderProcessor",
-		Description: "Processes customer orders by saving order details (items, address, customer info, and payment method).",
-		Parameters:  schema,
-		Strict:      true,
-	}
-}
-
-// Execute simulates processing the order by printing it and returning a success message.
-func (ot *OrderTool) Execute(args json.RawMessage) (interface{}, error) {
-	var order OrderSchema
-	if err := json.Unmarshal(args, &order); err != nil {
-		return nil, err
-	}
-
-	// Here you could insert the order into a database or call an external service.
-	fmt.Printf("Processing Order: %+v\n", order)
-	return "Order processed successfully", nil
-}
-
-// --------------------------
-// Custom Memory Implementation
-// --------------------------
-
-// CustomMemory is an example of a custom memory implementation using SQLite.
-type CustomMemory struct {
-	db    *gorm.DB
-	mutex sync.RWMutex
-}
-
-// NewCustomMemory initializes a new CustomMemory instance with the provided Gorm DB.
-func NewCustomMemory(db *gorm.DB) syndicate.Memory {
-	return &CustomMemory{
-		db: db,
-	}
-}
-
-// Add stores a new message into memory (database).
-func (m *CustomMemory) Add(message syndicate.Message) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	// Example: You could save the message to the database here.
-	// m.db.Create(&message)
-	fmt.Printf("Memory Add: %+v\n", message)
-}
-
-// Get retrieves stored messages from memory.
-// For simplicity, this example returns nil (in a real implementation, fetch from the DB).
-func (m *CustomMemory) Get() []syndicate.Message {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-	// Example: Retrieve recent messages from the database.
-	return nil
-}
-
-// Clear clears all stored messages.
-func (m *CustomMemory) Clear() {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	// Example: Delete messages from the database.
-	// m.db.Where("1 = 1").Delete(&syndicate.Message{})
-	fmt.Println("Memory cleared")
-}
-
-// --------------------------
-// Main Function & Pipeline
-// --------------------------
-
 func main() {
-	// Initialize the OpenAI client with your API key.
+	// Initialize OpenAI client.
 	client := syndicate.NewOpenAIClient("YOUR_OPENAI_API_KEY")
 
-	// Initialize a Gorm DB connection to SQLite for our custom memory.
+	// Set up SQLite connection.
 	db, err := gorm.Open(sqlite.Open("memory.db"), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Error opening database: %v", err)
 	}
 	customMemory := NewCustomMemory(db)
 
-	// Create an instance of our OrderTool.
+	// Step 3A: Create the Order Tool.
 	orderTool := NewOrderTool()
 
-	// Build the first agent: OrderAgent.
-	// This agent processes customer orders and can call the OrderTool.
+	// Step 3B: Build the OrderAgent.
 	orderAgent, err := syndicate.NewAgent().
 		SetClient(client).
 		SetName("OrderAgent").
-		SetConfigPrompt("You are an agent that processes customer orders. If the input contains order details, call the OrderProcessor tool to process the order.").
+		SetConfigPrompt("You are an agent processing customer orders. If the input contains order details, call the OrderProcessor tool.").
 		SetMemory(customMemory).
 		SetModel(openai.GPT4).
-		EquipTool(orderTool). // Equip the OrderTool.
+		EquipTool(orderTool). // Equip OrderTool
 		Build()
 	if err != nil {
 		log.Fatalf("Error building OrderAgent: %v", err)
 	}
 
-	// Build the second agent: SummaryAgent.
-	// This agent provides a final summary of the conversation.
+	// Step 3C: Build the SummaryAgent.
 	summaryAgent, err := syndicate.NewAgent().
 		SetClient(client).
 		SetName("SummaryAgent").
-		SetConfigPrompt("You are an agent that provides a final summary confirming that the order was processed and reiterating key details.").
+		SetConfigPrompt("You are an agent providing the final summary of the order.").
 		SetMemory(customMemory).
 		SetModel(openai.GPT4).
 		Build()
@@ -203,14 +225,14 @@ func main() {
 		log.Fatalf("Error building SummaryAgent: %v", err)
 	}
 
-	// Create a Syndicate system and define the processing pipeline.
+	// Step 3D: Define the pipeline with both agents.
 	syndicateSystem := syndicate.NewSyndicate().
 		RecruitAgent(orderAgent).
 		RecruitAgent(summaryAgent).
 		DefinePipeline([]string{"OrderAgent", "SummaryAgent"}).
 		Build()
 
-	// Simulate a user input written in natural language.
+	// Simulate user input.
 	userName := "Alice"
 	input := `Hi, I'd like to place an order. I want two Margherita Pizzas and one Coke. Please deliver them to 123 Main Street in Springfield. My name is Alice, my phone number is 555-1234, and I'll pay with cash.`
 
@@ -219,14 +241,18 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error executing pipeline: %v", err)
 	}
-
 	fmt.Println("\nFinal Syndicate Response:")
 	fmt.Println(response)
 }
-
 ```
 
-</details>
+### **Step 4: Run & Enjoy 🎉**
+
+1. Replace `"YOUR_OPENAI_API_KEY"` with your actual API key.
+2. Build and run your application.
+3. Watch as the agents process and summarize the order step-by-step!
+
+---
 
 <details>
   <summary><strong>Config Prompt Builder</strong></summary>
@@ -322,15 +348,19 @@ func main() {
 
 </details>
 
-## Dependencies and Their Licenses
+---
 
-This project uses the following third-party libraries:
+## Dependencies and Their Licenses
 
 - [sashabaranov/go-openai](https://github.com/sashabaranov/go-openai) - Licensed under **Apache License 2.0**
 - [cohesion-org/deepseek-go](https://github.com/cohesion-org/deepseek-go) - Licensed under **MIT License**
 
-Please refer to their respective repositories for the full license texts.
+Refer to their repositories for full license texts.
+
+---
 
 ## Contributing
 
 Contributions are welcome! Feel free to open issues or submit pull requests on [GitHub](https://github.com/Dieg0Code/syndicate-go).
+
+Happy coding! 👩‍💻👨‍💻
