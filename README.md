@@ -19,6 +19,18 @@ For a complete summary of the SDK features, head over to our 👉 [Quick Guide](
 
 ---
 
+## Installation
+
+To install Syndicate SDK, use Go modules:
+
+```bash
+go get github.com/Dieg0Code/syndicate-go
+```
+
+Ensure that you have Go installed and properly configured.
+
+---
+
 ## Conceptual Overview & Features
 
 ### **Agent Management 🤖**
@@ -108,20 +120,6 @@ _Why it's useful:_
 - **Future-Proofing:** Adapt the SDK to new requirements, features, or third-party integrations.
 
 _The outcome:_ A robust toolkit that adapts to your needs whether you’re building a prototype or a production-grade system! 🔄
-
----
-
-## Installation
-
-To install Syndicate SDK, use Go modules:
-
-```bash
-go get github.com/Dieg0Code/syndicate-go
-```
-
-Ensure that you have Go installed and properly configured.
-
----
 
 ## Quick Start Example: Step-by-Step Instructions 😊
 
