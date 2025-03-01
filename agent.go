@@ -52,6 +52,7 @@ type Agent interface {
 type BaseAgent struct {
 	client         LLMClient
 	name           string
+	description    string
 	systemPrompt   string
 	tools          map[string]Tool
 	memory         Memory
@@ -244,6 +245,7 @@ func (b *BaseAgent) prepareTools() []ToolDefinition {
 type AgentBuilder struct {
 	client         LLMClient
 	name           string
+	description    string
 	systemPrompt   string
 	memory         Memory
 	model          string
@@ -292,6 +294,12 @@ func (b *AgentBuilder) SetName(name string) *AgentBuilder {
 	return b
 }
 
+// SetDescription sets the description for the agent.
+func (b *AgentBuilder) SetDescription(description string) *AgentBuilder {
+	b.description = description
+	return b
+}
+
 // SetConfigPrompt sets the system prompt that configures the agent's behavior.
 func (b *AgentBuilder) SetConfigPrompt(prompt string) *AgentBuilder {
 	b.systemPrompt = prompt
@@ -333,6 +341,7 @@ func (b *AgentBuilder) Build() (*BaseAgent, error) {
 	return &BaseAgent{
 		client:         b.client,
 		name:           b.name,
+		description:    b.description,
 		systemPrompt:   b.systemPrompt,
 		tools:          b.tools,
 		memory:         b.memory,

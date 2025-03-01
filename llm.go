@@ -53,9 +53,9 @@ type ToolCall struct {
 
 // ToolDefinition describes a tool's capabilities.
 type ToolDefinition struct {
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Parameters  json.RawMessage `json:"parameters"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Parameters  any    `json:"parameters"`
 }
 
 // Tool defines the interface for executable tools.
