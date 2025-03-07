@@ -28,7 +28,7 @@ type Definition struct {
 	Type                 DataType              `json:"type,omitempty"`
 	Description          string                `json:"description,omitempty"`
 	Enum                 []string              `json:"enum,omitempty"`
-	Properties           map[string]Definition `json:"properties"`
+	Properties           map[string]Definition `json:"properties,omitempty"`
 	Required             []string              `json:"required,omitempty"`
 	Items                *Definition           `json:"items,omitempty"`
 	AdditionalProperties any                   `json:"additionalProperties,omitempty"`

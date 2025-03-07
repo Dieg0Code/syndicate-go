@@ -180,23 +180,3 @@ func TestReflectSchemaUnsupportedType(t *testing.T) {
 		t.Errorf("Se esperaba error para tipo no soportado (chan), se obtuvo: %v", err)
 	}
 }
-
-func TestMarshalJSONDefinitionPropertiesInitialized(t *testing.T) {
-	// Verificar que MarshalJSON inicialice Properties en caso de ser nil.
-	def := Definition{
-		Type: String,
-	}
-	out, err := json.Marshal(&def)
-	if err != nil {
-		t.Fatalf("Error en MarshalJSON: %v", err)
-	}
-	// El JSON resultante debe incluir "properties": {} (aunque se omita por omitempty, lo comprobamos indirectamente)
-	var m map[string]interface{}
-	if err := json.Unmarshal(out, &m); err != nil {
-		t.Fatalf("Error al decodificar JSON: %v", err)
-	}
-	// Si no existe "properties", se considera que no fue inicializado en MarshalJSON.
-	if _, exists := m["properties"]; !exists {
-		t.Error(`Se esperaba que "properties" estuviera presente tras MarshalJSON, aunque sea un objeto vacío`)
-	}
-}

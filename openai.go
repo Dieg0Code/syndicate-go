@@ -14,12 +14,15 @@ type OpenAIClient struct {
 	client *openai.Client
 }
 
-// NewOpenAIAzureClient creates an LLMClient for Azure using the provided API key and endpoint.
+// NewOpenAIAzureClient creates an LLMClient for Azure using Azure provider-specific settings.
 // It configures the client with Azure-specific settings.
-func NewOpenAIAzureClient(apiKey, endpoint string) LLMClient {
-	config := openai.DefaultAzureConfig(apiKey, endpoint)
+func NewOpenAIAzureClient(apiKey string) LLMClient {
+	config := openai.DefaultConfig(apiKey)
+	config.BaseURL = "https://models.inference.ai.azure.com"
+	client := openai.NewClientWithConfig(config)
+
 	return &OpenAIClient{
-		client: openai.NewClientWithConfig(config),
+		client: client,
 	}
 }
 
