@@ -161,6 +161,18 @@ func (b *BaseAgent) processWithTools(ctx context.Context, messages []Message, to
 // handleToolCalls executes each tool call concurrently and collects their results.
 // It updates the agent's memory with the tool results and handles errors during execution.
 func (b *BaseAgent) handleToolCalls(toolCalls []ToolCall) error {
+
+	b.mutex.Lock()
+
+	b.memory.Add(Message{
+		Role:      RoleAssistant,
+		ToolCalls: toolCalls,
+		Content:   "",
+		Name:      b.name,
+	})
+
+	b.mutex.Unlock()
+
 	var wg sync.WaitGroup
 
 	type toolResult struct {
