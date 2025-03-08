@@ -167,7 +167,7 @@ func (b *BaseAgent) handleToolCalls(toolCalls []ToolCall) error {
 	b.memory.Add(Message{
 		Role:      RoleAssistant,
 		ToolCalls: toolCalls,
-		Content:   "",
+		Content:   "Executing tool calls...",
 		Name:      b.name,
 	})
 
