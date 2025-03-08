@@ -221,10 +221,10 @@ func (b *BaseAgent) handleToolCalls(toolCalls []ToolCall) error {
 		}
 		b.mutex.Lock()
 		b.memory.Add(Message{
-			Role:    RoleTool,
-			Content: r.Content,
-			Name:    r.Name,
-			ToolID:  r.CallID,
+			Role:       RoleTool,
+			Content:    r.Content,
+			Name:       r.Name,
+			ToolCallID: r.CallID,
 		})
 		b.mutex.Unlock()
 	}

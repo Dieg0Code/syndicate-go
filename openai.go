@@ -59,7 +59,7 @@ func mapToOpenAIMessages(messages []Message) []openai.ChatCompletionMessage {
 				Role:       m.Role,
 				Name:       m.Name,
 				Content:    m.Content,
-				ToolCallID: m.ToolID,
+				ToolCallID: m.ToolCallID,
 			})
 		} else {
 			msg := openai.ChatCompletionMessage{

@@ -37,11 +37,11 @@ type ChatCompletionRequest struct {
 
 // Message represents a chat message with standardized fields.
 type Message struct {
-	Role      string     `json:"role"`
-	Content   string     `json:"content"`
-	Name      string     `json:"name,omitempty"`
-	ToolCalls []ToolCall `json:"tool_calls,omitempty"`
-	ToolID    string     `json:"tool_id,omitempty"`
+	Role       string     `json:"role"`
+	Content    string     `json:"content"`
+	Name       string     `json:"name,omitempty"`
+	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string     `json:"tool_call_id,omitempty"`
 }
 
 // ToolCall represents a tool invocation request.
