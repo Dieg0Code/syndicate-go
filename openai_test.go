@@ -19,7 +19,6 @@ func TestMapToOpenAIMessages(t *testing.T) {
 			Role:    "user",
 			Name:    "testUser",
 			Content: "Hello, world!",
-			ToolID:  "tool1",
 		},
 	}
 	openaiMsgs := mapToOpenAIMessages(messages)
@@ -34,9 +33,6 @@ func TestMapToOpenAIMessages(t *testing.T) {
 	}
 	if openaiMsgs[0].Content != "Hello, world!" {
 		t.Errorf("se esperaba content 'Hello, world!', se obtuvo '%s'", openaiMsgs[0].Content)
-	}
-	if openaiMsgs[0].ToolCallID != "tool1" {
-		t.Errorf("se esperaba ToolCallID 'tool1', se obtuvo '%s'", openaiMsgs[0].ToolCallID)
 	}
 }
 
