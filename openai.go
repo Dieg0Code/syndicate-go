@@ -33,16 +33,48 @@ func NewOpenAIClient(apiKey string) LLMClient {
 	}
 }
 
+// mapToOpenAIToolCalls converts internal ToolCall structs to OpenAI's format
+func mapToOpenAIToolCalls(calls []ToolCall) []openai.ToolCall {
+	var result []openai.ToolCall
+	for _, call := range calls {
+		result = append(result, openai.ToolCall{
+			ID: call.ID,
+			Function: openai.FunctionCall{
+				Name:      call.Name,
+				Arguments: string(call.Args),
+			},
+			Type: openai.ToolTypeFunction,
+		})
+	}
+	return result
+}
+
 // mapToOpenAIMessages converts a slice of internal Message structs into the format required by the OpenAI ChatCompletion API.
 func mapToOpenAIMessages(messages []Message) []openai.ChatCompletionMessage {
 	var msgs []openai.ChatCompletionMessage
 	for _, m := range messages {
-		msgs = append(msgs, openai.ChatCompletionMessage{
-			Role:       m.Role,
-			Name:       m.Name,
-			Content:    m.Content,
-			ToolCallID: m.ToolID,
-		})
+		// For tool messages, ensure proper mapping of ToolID to ToolCallID
+		if m.Role == RoleTool {
+			msgs = append(msgs, openai.ChatCompletionMessage{
+				Role:       m.Role,
+				Name:       m.Name,
+				Content:    m.Content,
+				ToolCallID: m.ToolID,
+			})
+		} else {
+			msg := openai.ChatCompletionMessage{
+				Role:    m.Role,
+				Name:    m.Name,
+				Content: m.Content,
+			}
+
+			// Only add tool calls if they exist
+			if len(m.ToolCalls) > 0 {
+				msg.ToolCalls = mapToOpenAIToolCalls(m.ToolCalls)
+			}
+
+			msgs = append(msgs, msg)
+		}
 	}
 	return msgs
 }
