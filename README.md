@@ -11,9 +11,9 @@
 
 # Syndicate
 
-**A Go SDK for orchestrating intelligent AI agents with LLMs, tools, and workflows.**
+**A clean, simple Go SDK for building AI agent applications with LLMs, tools, and workflows.**
 
-Build production-ready AI applications without the complexity of direct API management. Create agents that work independently or together in sophisticated pipelines.
+Eliminate the complexity of managing LLM APIs directly. Perfect for prototypes, MVPs, and applications that need straightforward AI agent integration.
 
 ## 🚀 Quick Start
 
@@ -53,11 +53,22 @@ func main() {
 
 ## ✨ Key Features
 
-- **🤖 Multi-Agent Orchestration**: Create specialized agents that work together in pipelines
+- **🤖 Agent Orchestration**: Create agents that work independently or in simple sequential pipelines
 - **🛠️ Tool Integration**: Connect agents to external APIs with automatic JSON schema generation
 - **💾 Flexible Memory**: From simple in-memory to custom database backends
-- **🔄 Pipeline Workflows**: Chain agents for complex, multi-step processing
+- **🔄 Sequential Workflows**: Chain agents for multi-step processing
 - **📝 Structured Prompts**: Build consistent, maintainable agent instructions
+- **⚡ Clean API**: Functional options pattern for readable, maintainable code
+
+## 🎯 Ideal For
+
+- **✅ Prototypes & MVPs** - Get AI features running quickly
+- **✅ Small to medium applications** - Clean integration without overhead
+- **✅ Learning AI development** - Simple, well-documented patterns
+- **✅ Custom tool integration** - Easy to extend with your APIs
+- **✅ Sequential workflows** - Chain agents for multi-step tasks
+
+**Not ideal for:** Complex branching workflows, high-scale production systems requiring advanced observability, or enterprise-grade orchestration needs.
 
 ## 📋 Examples
 
@@ -99,7 +110,7 @@ agent, _ := syndicate.NewAgent(
 )
 ```
 
-### Multi-Agent Pipeline
+### Sequential Multi-Agent Pipeline
 
 ```go
 // Create specialized agents
@@ -117,7 +128,7 @@ summaryAgent, _ := syndicate.NewAgent(
     syndicate.WithMemory(syndicate.NewSimpleMemory()),
 )
 
-// Create pipeline
+// Create sequential pipeline
 pipeline, _ := syndicate.NewSyndicate(
     syndicate.WithAgents(orderAgent, summaryAgent),
     syndicate.WithPipeline("OrderProcessor", "OrderSummarizer"),
@@ -164,7 +175,7 @@ agent, _ := syndicate.NewAgent(
 **Agent**: Individual AI entity with specific capabilities and memory  
 **Tool**: External function/API that agents can call  
 **Memory**: Conversation storage (in-memory, database, Redis, etc.)  
-**Syndicate**: Orchestrator that manages multi-agent workflows  
+**Syndicate**: Orchestrator that manages sequential multi-agent workflows  
 **Pipeline**: Sequential execution of multiple agents
 
 ## 📚 Advanced Usage
@@ -223,6 +234,7 @@ prompt := syndicate.NewPromptBuilder().
 
 **Supported LLM Providers**: OpenAI, DeepSeek  
 **Go Version**: 1.24+  
+**Architecture**: Sequential pipelines, simple agent orchestration  
 **Dependencies**: Minimal external dependencies
 
 ## 📖 Documentation
