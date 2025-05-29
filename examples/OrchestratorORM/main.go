@@ -4,75 +4,48 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sync"
 
 	syndicate "github.com/Dieg0Code/syndicate-go"
 	openai "github.com/sashabaranov/go-openai"
 )
 
-// CustomMemory is a custom implementation of the Memory interface.
-// It wraps a simple in-memory slice and logs each message addition.
-type CustomMemory struct {
-	messages []syndicate.Message
-	mutex    sync.RWMutex
-}
-
-// Add adds a message to the custom memory.
-func (m *CustomMemory) Add(message syndicate.Message) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	fmt.Println("CustomMemory - Adding message:", message)
-	m.messages = append(m.messages, message)
-}
-
-// Get returns all messages stored in the custom memory.
-func (m *CustomMemory) Get() []syndicate.Message {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-	copied := make([]syndicate.Message, len(m.messages))
-	copy(copied, m.messages)
-	return copied
-}
-
-// Clear removes all messages from the custom memory.
-func (m *CustomMemory) Clear() {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	m.messages = []syndicate.Message{}
-}
-
-// NewCustomMemory returns a new instance of Memory interface backed by CustomMemory.
-func NewCustomMemory() syndicate.Memory {
-	return &CustomMemory{
-		messages: make([]syndicate.Message, 0),
-	}
-}
-
 func main() {
 	// Initialize the OpenAI client using your API key.
 	client := syndicate.NewOpenAIClient("YOUR_API_KEY")
 
-	// Use the custom memory implementation.
-	customMemory := NewCustomMemory()
-
-	// Build an agent that uses CustomMemory.
-	agent, err := syndicate.NewAgent().
-		SetClient(client).
-		SetName("CustomMemoryAgent").
-		SetConfigPrompt("You are an agent that logs all messages to a custom memory implementation.").
-		SetMemory(customMemory).
-		SetModel(openai.GPT4).
-		Build()
+	// Create a custom memory implementation using functional options
+	customMemory, err := syndicate.NewMemory(
+		syndicate.WithAddHandler(func(msg syndicate.Message) {
+			fmt.Println("CustomMemory - Adding message:", msg)
+		}),
+		syndicate.WithGetHandler(func() []syndicate.Message {
+			fmt.Println("CustomMemory - Getting messages")
+			// In a real implementation, you would return your stored messages here
+			return []syndicate.Message{}
+		}),
+	)
 	if err != nil {
-		log.Fatalf("Error building agent: %v", err)
+		log.Fatalf("Error creating custom memory: %v", err)
 	}
 
-	// User name for the conversation.
-	userName := "User"
+	// Create an agent using functional options
+	agent, err := syndicate.NewAgent(
+		syndicate.WithClient(client),
+		syndicate.WithName("CustomMemoryAgent"),
+		syndicate.WithSystemPrompt("You are an agent that logs all messages to a custom memory implementation."),
+		syndicate.WithMemory(customMemory),
+		syndicate.WithModel(openai.GPT4),
+	)
+	if err != nil {
+		log.Fatalf("Error creating agent: %v", err)
+	}
 
-	// Process a sample input with the agent.
-	input := "What is your favorite quote?"
-	response, err := agent.Process(context.Background(), userName, input)
+	// Process a sample input with the agent using Chat method
+	ctx := context.Background()
+	response, err := agent.Chat(ctx,
+		syndicate.WithUserName("User"),
+		syndicate.WithInput("What is your favorite quote?"),
+	)
 	if err != nil {
 		log.Fatalf("Error processing request: %v", err)
 	}
@@ -80,7 +53,7 @@ func main() {
 	fmt.Println("Agent Response:")
 	fmt.Println(response)
 
-	// Display the contents of the custom memory.
+	// Display the contents of the custom memory
 	fmt.Println("\nCustom Memory Contents:")
 	for _, msg := range customMemory.Get() {
 		fmt.Printf("Role: %s, Content: %s\n", msg.Role, msg.Content)

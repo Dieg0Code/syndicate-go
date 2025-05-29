@@ -96,33 +96,51 @@ func TestGetSystemRole(t *testing.T) {
 	}
 }
 
-// TestAddTool verifica que al agregar una herramienta el agente la incluya en su mapa.
-func TestAddTool(t *testing.T) {
-	agent := &BaseAgent{
-		tools:  make(map[string]Tool),
-		memory: &fakeMemory{},
+// TestNewAgentWithRequiredFields verifica que NewAgent retorne error cuando faltan campos requeridos.
+func TestNewAgentWithRequiredFields(t *testing.T) {
+	// Sin client
+	_, err := NewAgent(
+		WithName("test"),
+		WithMemory(&fakeMemory{}),
+		WithModel("gpt-3.5-turbo"),
+	)
+	if err == nil || !strings.Contains(err.Error(), "client is required") {
+		t.Errorf("se esperaba error por falta de client, se obtuvo: %v", err)
 	}
-	myTool := &fakeTool{
-		def: ToolDefinition{Name: "testTool", Description: "herramienta de prueba"},
+
+	// Sin name
+	_, err = NewAgent(
+		WithClient(&fakeLLMClient{}),
+		WithMemory(&fakeMemory{}),
+		WithModel("gpt-3.5-turbo"),
+	)
+	if err == nil || !strings.Contains(err.Error(), "name is required") {
+		t.Errorf("se esperaba error por falta de name, se obtuvo: %v", err)
 	}
-	agent.AddTool(myTool)
-	if _, exists := agent.tools["testTool"]; !exists {
-		t.Error("la herramienta no fue agregada al agente")
+
+	// Sin memory
+	_, err = NewAgent(
+		WithClient(&fakeLLMClient{}),
+		WithName("test"),
+		WithModel("gpt-3.5-turbo"),
+	)
+	if err == nil || !strings.Contains(err.Error(), "memory is required") {
+		t.Errorf("se esperaba error por falta de memory, se obtuvo: %v", err)
+	}
+
+	// Sin model
+	_, err = NewAgent(
+		WithClient(&fakeLLMClient{}),
+		WithName("test"),
+		WithMemory(&fakeMemory{}),
+	)
+	if err == nil || !strings.Contains(err.Error(), "model is required") {
+		t.Errorf("se esperaba error por falta de model, se obtuvo: %v", err)
 	}
 }
 
-// TestSetConfigPrompt verifica que se asigne correctamente el prompt de configuración.
-func TestSetConfigPrompt(t *testing.T) {
-	agent := &BaseAgent{}
-	prompt := "Este es un prompt de sistema"
-	agent.SetConfigPrompt(prompt)
-	if agent.systemPrompt != prompt {
-		t.Errorf("se esperaba prompt '%s', se obtuvo '%s'", prompt, agent.systemPrompt)
-	}
-}
-
-// TestProcess verifica el flujo básico de Process, simulando una respuesta simple del LLM.
-func TestProcess(t *testing.T) {
+// TestChatBasic verifica el flujo básico de Chat, simulando una respuesta simple del LLM.
+func TestChatBasic(t *testing.T) {
 	fakeClient := &fakeLLMClient{
 		responses: []ChatCompletionResponse{
 			{
@@ -138,15 +156,21 @@ func TestProcess(t *testing.T) {
 		},
 	}
 	mem := &fakeMemory{}
-	agent := &BaseAgent{
-		client:      fakeClient,
-		name:        "agent1",
-		tools:       make(map[string]Tool),
-		memory:      mem,
-		model:       "gpt-3.5-turbo",
-		temperature: 0.5,
+	agent, err := NewAgent(
+		WithClient(fakeClient),
+		WithName("agent1"),
+		WithMemory(mem),
+		WithModel("gpt-3.5-turbo"),
+		WithTemperature(0.5),
+	)
+	if err != nil {
+		t.Fatalf("error creando agente: %v", err)
 	}
-	result, err := agent.Process(context.Background(), "user1", "Test input")
+
+	result, err := agent.Chat(context.Background(),
+		WithUserName("user1"),
+		WithInput("Test input"),
+	)
 	if err != nil {
 		t.Errorf("error inesperado: %v", err)
 	}
@@ -161,8 +185,8 @@ func TestProcess(t *testing.T) {
 	}
 }
 
-// TestProcessWithToolCall simula una situación en la que la primera respuesta solicita la ejecución de una herramienta.
-func TestProcessWithToolCall(t *testing.T) {
+// TestChatWithToolCall simula una situación en la que la primera respuesta solicita la ejecución de una herramienta.
+func TestChatWithToolCall(t *testing.T) {
 	// Configuramos una respuesta inicial que indique una llamada a herramienta.
 	toolCall := ToolCall{
 		ID:   "call1",
@@ -196,28 +220,38 @@ func TestProcessWithToolCall(t *testing.T) {
 		responses: responses,
 	}
 	mem := &fakeMemory{}
-	agent := &BaseAgent{
-		client:      fakeClient,
-		name:        "agentWithTool",
-		tools:       make(map[string]Tool),
-		memory:      mem,
-		model:       "gpt-3.5-turbo",
-		temperature: 0.7,
-	}
+
 	// Se registra una herramienta fake que retorna un resultado.
-	agent.tools["fakeTool"] = &fakeTool{
+	testTool := &fakeTool{
 		def: ToolDefinition{Name: "fakeTool", Description: "herramienta de prueba"},
 		execFunc: func(args json.RawMessage) (interface{}, error) {
 			return map[string]string{"result": "tool executed"}, nil
 		},
 	}
-	result, err := agent.Process(context.Background(), "user1", "Test tool call")
+
+	agent, err := NewAgent(
+		WithClient(fakeClient),
+		WithName("agentWithTool"),
+		WithMemory(mem),
+		WithModel("gpt-3.5-turbo"),
+		WithTemperature(0.7),
+		WithTool(testTool),
+	)
+	if err != nil {
+		t.Fatalf("error creando agente: %v", err)
+	}
+
+	result, err := agent.Chat(context.Background(),
+		WithUserName("user1"),
+		WithInput("Test tool call"),
+	)
 	if err != nil {
 		t.Errorf("error inesperado: %v", err)
 	}
 	if result != "final result" {
 		t.Errorf("se esperaba 'final result', se obtuvo '%s'", result)
 	}
+
 	// Verificamos que en la memoria se haya agregado el mensaje del resultado de la herramienta.
 	foundToolMsg := false
 	for _, msg := range mem.Get() {
@@ -233,8 +267,8 @@ func TestProcessWithToolCall(t *testing.T) {
 	}
 }
 
-// TestAgentBuilder verifica que el AgentBuilder configure correctamente un agente.
-func TestAgentBuilder(t *testing.T) {
+// TestAgentWithFunctionalOptions verifica que los functional options configuren correctamente un agente.
+func TestAgentWithFunctionalOptions(t *testing.T) {
 	fakeClient := &fakeLLMClient{
 		responses: []ChatCompletionResponse{
 			{
@@ -248,46 +282,48 @@ func TestAgentBuilder(t *testing.T) {
 		},
 	}
 	mem := &fakeMemory{}
-	builder := NewAgent().
-		SetClient(fakeClient).
-		SetName("builderAgent").
-		SetConfigPrompt("builder prompt").
-		SetMemory(mem).
-		SetModel("gpt-3.5-turbo").
-		SetTemperature(0.9)
-	agent, err := builder.Build()
+
+	agent, err := NewAgent(
+		WithClient(fakeClient),
+		WithName("functionalAgent"),
+		WithDescription("test description"),
+		WithSystemPrompt("functional prompt"),
+		WithMemory(mem),
+		WithModel("gpt-3.5-turbo"),
+		WithTemperature(0.9),
+		WithTimeout(45*time.Second),
+	)
 	if err != nil {
 		t.Fatalf("error inesperado al construir el agente: %v", err)
 	}
-	if agent.name != "builderAgent" {
-		t.Errorf("se esperaba el nombre 'builderAgent', se obtuvo '%s'", agent.name)
-	}
-	if agent.systemPrompt != "builder prompt" {
-		t.Errorf("se esperaba el prompt 'builder prompt', se obtuvo '%s'", agent.systemPrompt)
-	}
-	if agent.model != "gpt-3.5-turbo" {
-		t.Errorf("se esperaba el modelo 'gpt-3.5-turbo', se obtuvo '%s'", agent.model)
-	}
-	if agent.temperature != 0.9 {
-		t.Errorf("se esperaba la temperatura 0.9, se obtuvo %f", agent.temperature)
+
+	if agent.GetName() != "functionalAgent" {
+		t.Errorf("se esperaba el nombre 'functionalAgent', se obtuvo '%s'", agent.GetName())
 	}
 }
 
 // ----- Tests Adicionales para Robustez -----
 
-// TestProcessLLMClientError simula un escenario en el que el cliente LLM retorna error.
-func TestProcessLLMClientError(t *testing.T) {
+// TestChatLLMClientError simula un escenario en el que el cliente LLM retorna error.
+func TestChatLLMClientError(t *testing.T) {
 	fakeClient := &fakeLLMClientWithError{}
 	mem := &fakeMemory{}
-	agent := &BaseAgent{
-		client:      fakeClient,
-		name:        "errAgent",
-		tools:       make(map[string]Tool),
-		memory:      mem,
-		model:       "gpt-3.5-turbo",
-		temperature: 0.5,
+
+	agent, err := NewAgent(
+		WithClient(fakeClient),
+		WithName("errAgent"),
+		WithMemory(mem),
+		WithModel("gpt-3.5-turbo"),
+		WithTemperature(0.5),
+	)
+	if err != nil {
+		t.Fatalf("error creando agente: %v", err)
 	}
-	_, err := agent.Process(context.Background(), "user1", "Test error handling")
+
+	_, err = agent.Chat(context.Background(),
+		WithUserName("user1"),
+		WithInput("Test error handling"),
+	)
 	if err == nil || !strings.Contains(err.Error(), "simulated LLM error") {
 		t.Errorf("se esperaba error de LLM, se obtuvo: %v", err)
 	}
@@ -304,15 +340,22 @@ func TestNoResponseChoices(t *testing.T) {
 		},
 	}
 	mem := &fakeMemory{}
-	agent := &BaseAgent{
-		client:      fakeClient,
-		name:        "noChoiceAgent",
-		tools:       make(map[string]Tool),
-		memory:      mem,
-		model:       "gpt-3.5-turbo",
-		temperature: 0.5,
+
+	agent, err := NewAgent(
+		WithClient(fakeClient),
+		WithName("noChoiceAgent"),
+		WithMemory(mem),
+		WithModel("gpt-3.5-turbo"),
+		WithTemperature(0.5),
+	)
+	if err != nil {
+		t.Fatalf("error creando agente: %v", err)
 	}
-	_, err := agent.Process(context.Background(), "user1", "Test no choices")
+
+	_, err = agent.Chat(context.Background(),
+		WithUserName("user1"),
+		WithInput("Test no choices"),
+	)
 	if err == nil || !strings.Contains(err.Error(), "no response choices available") {
 		t.Errorf("se esperaba error por falta de choices, se obtuvo: %v", err)
 	}
@@ -342,22 +385,31 @@ func TestToolExecutionError(t *testing.T) {
 		responses: responses,
 	}
 	mem := &fakeMemory{}
-	agent := &BaseAgent{
-		client:      fakeClient,
-		name:        "errorToolAgent",
-		tools:       make(map[string]Tool),
-		memory:      mem,
-		model:       "gpt-3.5-turbo",
-		temperature: 0.5,
-	}
+
 	// Registrar una herramienta que falla en la ejecución.
-	agent.tools["errorTool"] = &fakeTool{
+	errorTool := &fakeTool{
 		def: ToolDefinition{Name: "errorTool", Description: "falla en ejecución"},
 		execFunc: func(args json.RawMessage) (interface{}, error) {
 			return nil, errors.New("tool execution failure")
 		},
 	}
-	_, err := agent.Process(context.Background(), "user1", "Trigger tool error")
+
+	agent, err := NewAgent(
+		WithClient(fakeClient),
+		WithName("errorToolAgent"),
+		WithMemory(mem),
+		WithModel("gpt-3.5-turbo"),
+		WithTemperature(0.5),
+		WithTool(errorTool),
+	)
+	if err != nil {
+		t.Fatalf("error creando agente: %v", err)
+	}
+
+	_, err = agent.Chat(context.Background(),
+		WithUserName("user1"),
+		WithInput("Trigger tool error"),
+	)
 	if err == nil || !strings.Contains(err.Error(), "tool execution failure") {
 		t.Errorf("se esperaba error en la ejecución de la herramienta, se obtuvo: %v", err)
 	}
@@ -403,35 +455,45 @@ func TestMultipleToolCalls(t *testing.T) {
 		responses: responses,
 	}
 	mem := &fakeMemory{}
-	agent := &BaseAgent{
-		client:      fakeClient,
-		name:        "multiToolAgent",
-		tools:       make(map[string]Tool),
-		memory:      mem,
-		model:       "gpt-3.5-turbo",
-		temperature: 0.5,
-	}
-	agent.tools["toolA"] = &fakeTool{
+
+	toolA := &fakeTool{
 		def: ToolDefinition{Name: "toolA", Description: "herramienta A"},
 		execFunc: func(args json.RawMessage) (interface{}, error) {
 			time.Sleep(50 * time.Millisecond)
 			return map[string]string{"result": "A executed"}, nil
 		},
 	}
-	agent.tools["toolB"] = &fakeTool{
+	toolB := &fakeTool{
 		def: ToolDefinition{Name: "toolB", Description: "herramienta B"},
 		execFunc: func(args json.RawMessage) (interface{}, error) {
 			time.Sleep(30 * time.Millisecond)
 			return map[string]string{"result": "B executed"}, nil
 		},
 	}
-	result, err := agent.Process(context.Background(), "user1", "Test multiple tools")
+
+	agent, err := NewAgent(
+		WithClient(fakeClient),
+		WithName("multiToolAgent"),
+		WithMemory(mem),
+		WithModel("gpt-3.5-turbo"),
+		WithTemperature(0.5),
+		WithTools(toolA, toolB),
+	)
+	if err != nil {
+		t.Fatalf("error creando agente: %v", err)
+	}
+
+	result, err := agent.Chat(context.Background(),
+		WithUserName("user1"),
+		WithInput("Test multiple tools"),
+	)
 	if err != nil {
 		t.Errorf("error inesperado: %v", err)
 	}
 	if result != "multi tool final" {
 		t.Errorf("se esperaba 'multi tool final', se obtuvo '%s'", result)
 	}
+
 	// Verificar que en la memoria se hayan agregado mensajes de ambas herramientas.
 	foundA, foundB := false, false
 	for _, msg := range mem.Get() {
@@ -446,5 +508,173 @@ func TestMultipleToolCalls(t *testing.T) {
 	}
 	if !foundA || !foundB {
 		t.Errorf("no se encontraron ambas respuestas de herramienta, toolA: %v, toolB: %v", foundA, foundB)
+	}
+}
+
+// TestChatWithTimeout verifica que el timeout personalizado funcione correctamente.
+func TestChatWithTimeout(t *testing.T) {
+	fakeClient := &fakeLLMClient{
+		responses: []ChatCompletionResponse{
+			{
+				Choices: []Choice{
+					{
+						Message: Message{Content: "timeout test response"},
+					},
+				},
+				Usage: Usage{},
+			},
+		},
+	}
+	mem := &fakeMemory{}
+
+	agent, err := NewAgent(
+		WithClient(fakeClient),
+		WithName("timeoutAgent"),
+		WithMemory(mem),
+		WithModel("gpt-3.5-turbo"),
+		WithTimeout(10*time.Second),
+	)
+	if err != nil {
+		t.Fatalf("error creando agente: %v", err)
+	}
+
+	result, err := agent.Chat(context.Background(),
+		WithUserName("user1"),
+		WithInput("Test timeout"),
+		WithChatTimeout(5*time.Second),
+	)
+	if err != nil {
+		t.Errorf("error inesperado: %v", err)
+	}
+	if result != "timeout test response" {
+		t.Errorf("se esperaba 'timeout test response', se obtuvo '%s'", result)
+	}
+}
+
+// TestChatValidation verifica que la validación de parámetros funcione correctamente.
+func TestChatValidation(t *testing.T) {
+	fakeClient := &fakeLLMClient{}
+	mem := &fakeMemory{}
+
+	agent, err := NewAgent(
+		WithClient(fakeClient),
+		WithName("validationAgent"),
+		WithMemory(mem),
+		WithModel("gpt-3.5-turbo"),
+	)
+	if err != nil {
+		t.Fatalf("error creando agente: %v", err)
+	}
+
+	// Test sin userName
+	_, err = agent.Chat(context.Background(),
+		WithInput("Test input"),
+	)
+	if err == nil || !strings.Contains(err.Error(), "user name is required") {
+		t.Errorf("se esperaba error por falta de userName, se obtuvo: %v", err)
+	}
+
+	// Test sin input
+	_, err = agent.Chat(context.Background(),
+		WithUserName("user1"),
+	)
+	if err == nil || !strings.Contains(err.Error(), "input is required") {
+		t.Errorf("se esperaba error por falta de input, se obtuvo: %v", err)
+	}
+}
+
+// TestChatWithImages verifica que las imágenes se manejen correctamente.
+func TestChatWithImages(t *testing.T) {
+	fakeClient := &fakeLLMClient{
+		responses: []ChatCompletionResponse{
+			{
+				Choices: []Choice{
+					{
+						Message: Message{Content: "image processed"},
+					},
+				},
+				Usage: Usage{},
+			},
+		},
+	}
+	mem := &fakeMemory{}
+
+	agent, err := NewAgent(
+		WithClient(fakeClient),
+		WithName("imageAgent"),
+		WithMemory(mem),
+		WithModel("gpt-3.5-turbo"),
+	)
+	if err != nil {
+		t.Fatalf("error creando agente: %v", err)
+	}
+
+	result, err := agent.Chat(context.Background(),
+		WithUserName("user1"),
+		WithInput("Describe this image"),
+		WithImages("https://example.com/image.jpg"),
+	)
+	if err != nil {
+		t.Errorf("error inesperado: %v", err)
+	}
+	if result != "image processed" {
+		t.Errorf("se esperaba 'image processed', se obtuvo '%s'", result)
+	}
+
+	// Verificar que el mensaje del usuario tenga las URLs de imágenes
+	messages := mem.Get()
+	found := false
+	for _, msg := range messages {
+		if msg.Role == RoleUser && len(msg.ImageURLs) > 0 {
+			if msg.ImageURLs[0] == "https://example.com/image.jpg" {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Error("no se encontró el mensaje del usuario con las URLs de imágenes")
+	}
+}
+
+// TestAgentWithJSONResponseFormat verifica que el formato de respuesta JSON funcione.
+func TestAgentWithJSONResponseFormat(t *testing.T) {
+	type ResponseSchema struct {
+		Result string `json:"result"`
+	}
+
+	fakeClient := &fakeLLMClient{
+		responses: []ChatCompletionResponse{
+			{
+				Choices: []Choice{
+					{
+						Message: Message{Content: `{"result": "json response"}`},
+					},
+				},
+				Usage: Usage{},
+			},
+		},
+	}
+	mem := &fakeMemory{}
+
+	agent, err := NewAgent(
+		WithClient(fakeClient),
+		WithName("jsonAgent"),
+		WithMemory(mem),
+		WithModel("gpt-3.5-turbo"),
+		WithJSONResponseFormat("test_schema", ResponseSchema{}),
+	)
+	if err != nil {
+		t.Fatalf("error creando agente: %v", err)
+	}
+
+	result, err := agent.Chat(context.Background(),
+		WithUserName("user1"),
+		WithInput("Return JSON response"),
+	)
+	if err != nil {
+		t.Errorf("error inesperado: %v", err)
+	}
+	if result != `{"result": "json response"}` {
+		t.Errorf("se esperaba respuesta JSON, se obtuvo '%s'", result)
 	}
 }

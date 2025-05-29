@@ -17,44 +17,49 @@ func main() {
 	memoryAgentOne := syndicate.NewSimpleMemory()
 	memoryAgentTwo := syndicate.NewSimpleMemory()
 
-	// Build the first agent (HelloAgent).
-	agentOne, err := syndicate.NewAgent().
-		SetClient(client).
-		SetName("HelloAgent").
-		SetConfigPrompt("You are an agent that warmly greets users and encourages further interaction.").
-		SetMemory(memoryAgentOne).
-		SetModel(openai.GPT4).
-		Build()
+	// Build the first agent (HelloAgent) using functional options.
+	agentOne, err := syndicate.NewAgent(
+		syndicate.WithClient(client),
+		syndicate.WithName("HelloAgent"),
+		syndicate.WithSystemPrompt("You are an agent that warmly greets users and encourages further interaction."),
+		syndicate.WithMemory(memoryAgentOne),
+		syndicate.WithModel(openai.GPT4),
+	)
 	if err != nil {
-		log.Fatalf("Error building HelloAgent: %v", err)
+		log.Fatalf("Error creating HelloAgent: %v", err)
 	}
 
-	// Build the second agent (FinalAgent).
-	agentTwo, err := syndicate.NewAgent().
-		SetClient(client).
-		SetName("FinalAgent").
-		SetConfigPrompt("You are an agent that provides a final summary based on the conversation.").
-		SetMemory(memoryAgentTwo).
-		SetModel(openai.GPT4).
-		Build()
+	// Build the second agent (FinalAgent) using functional options.
+	agentTwo, err := syndicate.NewAgent(
+		syndicate.WithClient(client),
+		syndicate.WithName("FinalAgent"),
+		syndicate.WithSystemPrompt("You are an agent that provides a final summary based on the conversation."),
+		syndicate.WithMemory(memoryAgentTwo),
+		syndicate.WithModel(openai.GPT4),
+	)
 	if err != nil {
-		log.Fatalf("Error building FinalAgent: %v", err)
+		log.Fatalf("Error creating FinalAgent: %v", err)
 	}
 
-	// Create a syndicate, recruit both agents, and define the execution pipeline.
-	syndicateSystem := syndicate.NewSyndicate().
-		RecruitAgent(agentOne).
-		RecruitAgent(agentTwo).
+	// Create a syndicate using functional options and define the execution pipeline.
+	syndicateSystem, err := syndicate.NewSyndicate(
+		syndicate.WithAgents(agentOne, agentTwo),
 		// Define the processing pipeline: first HelloAgent, then FinalAgent.
-		DefinePipeline([]string{"HelloAgent", "FinalAgent"}).
-		Build()
+		syndicate.WithPipeline("HelloAgent", "FinalAgent"),
+	)
+	if err != nil {
+		log.Fatalf("Error creating syndicate: %v", err)
+	}
 
 	// User name for the conversation.
 	userName := "User"
 
-	// Provide an input and process the pipeline.
+	// Provide an input and process the pipeline using functional options.
 	input := "Please greet the user and provide a summary."
-	response, err := syndicateSystem.ExecutePipeline(context.Background(), userName, input)
+	response, err := syndicateSystem.ExecutePipeline(context.Background(),
+		syndicate.WithPipelineUserName(userName),
+		syndicate.WithPipelineInput(input),
+	)
 	if err != nil {
 		log.Fatalf("Error processing pipeline: %v", err)
 	}

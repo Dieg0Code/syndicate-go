@@ -28,21 +28,24 @@ func main() {
 	fmt.Println("System Prompt:")
 	fmt.Println(systemPrompt)
 
-	// Build the agent using AgentBuilder.
-	agent, err := syndicate.NewAgent().
-		SetClient(client).
-		SetName("HaikuAgent").
-		SetConfigPrompt(systemPrompt).
-		SetMemory(memory).
-		SetModel(openai.GPT4).
-		Build()
-
+	// Create the agent using functional options instead of builder pattern.
+	agent, err := syndicate.NewAgent(
+		syndicate.WithClient(client),
+		syndicate.WithName("HaikuAgent"),
+		syndicate.WithSystemPrompt(systemPrompt),
+		syndicate.WithMemory(memory),
+		syndicate.WithModel(openai.GPT4),
+	)
 	if err != nil {
-		log.Fatalf("Error building agent: %v", err)
+		log.Fatalf("Error creating agent: %v", err)
 	}
 
-	// Process a sample input with the agent.
-	response, err := agent.Process(context.Background(), "Jhon Doe", "What is the weather like today?")
+	// Process a sample input with the agent using Chat method instead of Process.
+	ctx := context.Background()
+	response, err := agent.Chat(ctx,
+		syndicate.WithUserName("John Doe"),
+		syndicate.WithInput("What is the weather like today?"),
+	)
 	if err != nil {
 		log.Fatalf("Error processing request: %v", err)
 	}
