@@ -65,33 +65,28 @@ func main() {
     client := syndicate.NewOpenAIClient("YOUR_API_KEY")
 
     // Create an order processing agent
-    orderAgent, _ := syndicate.NewAgent().
-        SetClient(client).
-        SetName("OrderAgent").
-        SetConfigPrompt("You process customer orders.").
-        SetModel(openai.GPT4).
-        Build()
+    orderAgent, _ := syndicate.NewAgent(
+        syndicate.WithClient(client),
+        syndicate.WithName("OrderAgent"),
+        syndicate.WithSystemPrompt("You process customer orders."),
+        syndicate.WithModel(openai.GPT4),
+        syndicate.WithMemory(syndicate.NewSimpleMemory()),
+    )
 
     // Create a summary agent
-    summaryAgent, _ := syndicate.NewAgent().
-        SetClient(client).
-        SetName("SummaryAgent").
-        SetConfigPrompt("You summarize order details.").
-        SetModel(openai.GPT4).
-        Build()
+    summaryAgent, _ := syndicate.NewAgent(
+        syndicate.WithClient(client),
+        syndicate.WithName("SummaryAgent"),
+        syndicate.WithSystemPrompt("You summarize order details."),
+        syndicate.WithModel(openai.GPT4),
+        syndicate.WithMemory(syndicate.NewSimpleMemory()),
+    )
 
-    // Create a pipeline with both agents
-    system := syndicate.NewSyndicate().
-        RecruitAgent(orderAgent).
-        RecruitAgent(summaryAgent).
-        DefinePipeline([]string{"OrderAgent", "SummaryAgent"}).
-        Build()
-
-    // Process user input
-    response, _ := system.ExecutePipeline(
+    // Use agents directly for chat
+    response, _ := orderAgent.Chat(
         context.Background(),
-        "User",
-        "I'd like to order two pizzas for delivery to 123 Main St."
+        syndicate.WithUserName("User"),
+        syndicate.WithInput("I'd like to order two pizzas for delivery to 123 Main St."),
     )
 
     fmt.Println(response)
@@ -248,25 +243,27 @@ Here's an example of what a `Handler` for the `SaveOrder` tool might look like: 
 package main
 
 import (
+    "context"
     "encoding/json"
     "fmt"
     "log"
 
     syndicate "github.com/Dieg0Code/syndicate-go"
+    openai "github.com/sashabaranov/go-openai"
 )
 
 type MenuItemSchema struct {
-	ItemName string `json:"item_name" description:"Menu item name" required:"true"`
-	Quantity int    `json:"quantity" description:"Quantity ordered by the user" required:"true"`
-	Price    int    `json:"price" description:"Menu item price" required:"true"`
+    ItemName string `json:"item_name" description:"Menu item name" required:"true"`
+    Quantity int    `json:"quantity" description:"Quantity ordered by the user" required:"true"`
+    Price    int    `json:"price" description:"Menu item price" required:"true"`
 }
 
 type UserOrderFunctionSchema struct {
-	MenuItems       []MenuItemSchema `json:"menu_items" description:"List of ordered menu items" required:"true"`
-	DeliveryAddress string           `json:"delivery_address" description:"Order delivery address" required:"true"`
-	UserName        string           `json:"user_name" description:"User's name placing the order" required:"true"`
-	PhoneNumber     string           `json:"phone_number" description:"User's phone number" required:"true"`
-	PaymentMethod   string           `json:"payment_method" description:"Payment method (cash or transfer only)" required:"true" enum:"cash,transfer"`
+    MenuItems       []MenuItemSchema `json:"menu_items" description:"List of ordered menu items" required:"true"`
+    DeliveryAddress string           `json:"delivery_address" description:"Order delivery address" required:"true"`
+    UserName        string           `json:"user_name" description:"User's name placing the order" required:"true"`
+    PhoneNumber     string           `json:"phone_number" description:"User's phone number" required:"true"`
+    PaymentMethod   string           `json:"payment_method" description:"Payment method (cash or transfer only)" required:"true" enum:"cash,transfer"`
 }
 
 type SaveOrderTool struct {
@@ -287,7 +284,6 @@ func (s *SaveOrderTool) GetDefinition() syndicate.ToolDefinition {
         Name:        "SaveOrder",
         Description: "Retrieves the user's order. The user must provide the requested menu items, delivery address, name, phone number, and payment method. The payment method can only be cash or bank transfer.",
         Parameters:  schema,
-        Strict:      true,
     }
 }
 
@@ -308,26 +304,38 @@ func (s *SaveOrderTool) Execute(args json.RawMessage) (interface{}, error) {
 }
 
 func main() {
+    // Initialize OpenAI client
+    client := syndicate.NewOpenAIClient("YOUR_API_KEY")
+
+    // Create memory for the agent
+    memory := syndicate.NewSimpleMemory()
+
     // Create a new instance of the tool
     saveOrderTool := NewSaveOrderTool()
 
-    // Create a new instance of an agent
-    agent, err := syndicate.NewAgent().
-        SetClient(client).
-        SetName("HelloAgent").
-        SetConfigPrompt("<YOUR_PROMPT>").
-        SetMemory(memoryAgentOne).
-        SetModel(openai.GPT4).
-        EquipTool(saveOrderTool). // Equip the tool to the agent 🧰
-        Build()
+    // ✅ Create agent using functional options pattern
+    agent, err := syndicate.NewAgent(
+        syndicate.WithClient(client),
+        syndicate.WithName("OrderAgent"),
+        syndicate.WithSystemPrompt("You are a helpful restaurant assistant that processes customer orders. Always collect all required information before calling the SaveOrder tool."),
+        syndicate.WithModel(openai.GPT4),
+        syndicate.WithMemory(memory),
+        syndicate.WithTools(saveOrderTool), // ✅ Equip the tool to the agent 🧰
+    )
     if err != nil {
         fmt.Printf("Error creating agent: %v\n", err)
+        return
     }
 
-    // Process a sample input with the agent 🧠
-    response, err := agent.Process(context.Background(), "Jhon Doe", "What is on the menu?")
+    // ✅ Chat with the agent using functional options
+    response, err := agent.Chat(
+        context.Background(),
+        syndicate.WithUserName("John Doe"),
+        syndicate.WithInput("I want to order 2 pizzas for delivery to 123 Main St. My phone is 555-1234 and I'll pay with cash."),
+    )
     if err != nil {
         fmt.Printf("Error processing input: %v\n", err)
+        return
     }
 
     fmt.Println("\nAgent Response:")
@@ -349,57 +357,166 @@ By simply implementing the `Tool` interface and adding the tool to the agent, yo
 <details>
   <summary><b>Memory Management</b></summary>
 
-Implement long-term memory for the agent using the `Memory` interface. This allows the agent to retain context across conversations and improve its responses over time.
+Agents can remember conversations across multiple interactions using the Memory interface.
+
+### Built-in Simple Memory
+
+For most cases, use the built-in memory:
+
+```go
+agent, _ := syndicate.NewAgent(
+    syndicate.WithClient(client),
+    syndicate.WithName("ChatAgent"),
+    syndicate.WithSystemPrompt("You are a helpful assistant."),
+    syndicate.WithModel(openai.GPT4),
+    syndicate.WithMemory(syndicate.NewSimpleMemory()), // ✅ Remembers conversations
+)
+
+// First conversation
+response1, _ := agent.Chat(ctx,
+    syndicate.WithUserName("Alice"),
+    syndicate.WithInput("My favorite color is blue."))
+
+// Later conversation - agent remembers!
+response2, _ := agent.Chat(ctx,
+    syndicate.WithUserName("Alice"),
+    syndicate.WithInput("What's my favorite color?"))
+```
+
+### Custom Memory Implementation
+
+Use `NewMemory` with functional options for custom storage:
 
 ```go
 package main
 
+import (
+    "database/sql"
+    "encoding/json"
+    "sync"
 
-/* Import necessary packages */
+    syndicate "github.com/Dieg0Code/syndicate-go"
+    _ "github.com/lib/pq"
+)
 
-type ChatMemory struct {
+// Database-backed memory example
+func NewDatabaseMemory(db *sql.DB, agentID string) (syndicate.Memory, error) {
+    var mu sync.RWMutex
 
-  /* These fields are important for the memory system */
+    return syndicate.NewMemory(
+        // Handle adding messages to database
+        syndicate.WithAddHandler(func(message syndicate.Message) {
+            mu.Lock()
+            defer mu.Unlock()
 
-  Name string // Name of the sender
-  Role string // Role of the sender (user or assistant)
-  Content string // Content of the message
-  ToolCallID string // ID of the tool call (if applicable)
-  ToolCalls datatype.JSON // Tool calls made during the conversation
+            messageData, _ := json.Marshal(message)
+            query := `INSERT INTO agent_messages (agent_id, message_data) VALUES ($1, $2)`
+            db.Exec(query, agentID, messageData)
+        }),
 
-  /* Add any other fields you need for your memory system */
+        // Handle retrieving messages from database
+        syndicate.WithGetHandler(func() []syndicate.Message {
+            mu.RLock()
+            defer mu.RUnlock()
 
+            query := `SELECT message_data FROM agent_messages WHERE agent_id = $1 ORDER BY created_at`
+            rows, err := db.Query(query, agentID)
+            if err != nil {
+                return []syndicate.Message{}
+            }
+            defer rows.Close()
+
+            var messages []syndicate.Message
+            for rows.Next() {
+                var messageData []byte
+                if rows.Scan(&messageData) == nil {
+                    var message syndicate.Message
+                    if json.Unmarshal(messageData, &message) == nil {
+                        messages = append(messages, message)
+                    }
+                }
+            }
+            return messages
+        }),
+    )
 }
 
-type MyMemory struct {
-  /* Define your necessary dependencies here */
+// Redis-backed memory example
+func NewRedisMemory(client *redis.Client, agentID string) (syndicate.Memory, error) {
+    key := fmt.Sprintf("agent:%s:messages", agentID)
+
+    return syndicate.NewMemory(
+        syndicate.WithAddHandler(func(message syndicate.Message) {
+            messageData, _ := json.Marshal(message)
+            client.LPush(context.Background(), key, messageData)
+        }),
+
+        syndicate.WithGetHandler(func() []syndicate.Message {
+            result := client.LRange(context.Background(), key, 0, -1)
+            messagesData, _ := result.Result()
+
+            var messages []syndicate.Message
+            // Reverse to maintain chronological order
+            for i := len(messagesData) - 1; i >= 0; i-- {
+                var message syndicate.Message
+                if json.Unmarshal([]byte(messagesData[i]), &message) == nil {
+                    messages = append(messages, message)
+                }
+            }
+            return messages
+        }),
+    )
 }
 
-func NewMyMemory(/* Dependencies */) syndicate.Memory {
-  return &MyMemory{
-    /* Initialize your dependencies here */
-  }
-}
+// Usage with custom memory
+func main() {
+    db, _ := sql.Open("postgres", "postgres://user:password@localhost/dbname")
 
-func (m *MyMemory) Get() []syndicate.Message {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-	ctx := context.Background()
+    // Create custom database memory using functional options
+    dbMemory, err := NewDatabaseMemory(db, "agent-123")
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	/* Implement the logic to retrieve messages from your memory system */
+    agent, _ := syndicate.NewAgent(
+        syndicate.WithClient(client),
+        syndicate.WithName("PersistentAgent"),
+        syndicate.WithMemory(dbMemory), // ✅ Custom memory with functional options
+        // ... other options
+    )
 
-	return messages
-}
-
-func func (m *MyMemory) Add(message syndicate.Message) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	ctx := context.Background()
-
-  /* Implement the logic to add messages to your memory system */
-
+    // Conversations persist across application restarts!
+    response, _ := agent.Chat(ctx,
+        syndicate.WithUserName("Bob"),
+        syndicate.WithInput("Remember that I'm working on project X."))
 }
 ```
+
+### Memory Interface
+
+All memory implementations use this interface:
+
+```go
+type Memory interface {
+    Add(message Message) // Store a new message
+    Get() []Message      // Retrieve all stored messages
+}
+
+// Create custom memory with functional options
+memory, err := syndicate.NewMemory(
+    syndicate.WithAddHandler(func(msg syndicate.Message) {
+        // Your custom add logic
+    }),
+    syndicate.WithGetHandler(func() []syndicate.Message {
+        // Your custom get logic
+        return messages
+    }),
+)
+```
+
+**✅ Use `NewSimpleMemory()` for development and testing**  
+**✅ Use `NewMemory()` with functional options for production persistence**  
+**✅ Both handlers (WithAddHandler and WithGetHandler) are required**
 
 </details>
 
