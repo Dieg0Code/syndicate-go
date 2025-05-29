@@ -63,9 +63,37 @@ func mapToOpenAIMessages(messages []Message) []openai.ChatCompletionMessage {
 			})
 		} else {
 			msg := openai.ChatCompletionMessage{
-				Role:    m.Role,
-				Name:    m.Name,
-				Content: m.Content,
+				Role: m.Role,
+				Name: m.Name,
+			}
+
+			// Handle messages with images
+			if len(m.ImageURLs) > 0 {
+				var content []openai.ChatMessagePart
+
+				// Add text content if exists
+				if m.Content != "" {
+					content = append(content, openai.ChatMessagePart{
+						Type: openai.ChatMessagePartTypeText,
+						Text: m.Content,
+					})
+				}
+
+				// Add image contents
+				for _, imageURL := range m.ImageURLs {
+					content = append(content, openai.ChatMessagePart{
+						Type: openai.ChatMessagePartTypeImageURL,
+						ImageURL: &openai.ChatMessageImageURL{
+							URL:    imageURL,
+							Detail: openai.ImageURLDetailAuto,
+						},
+					})
+				}
+
+				msg.MultiContent = content
+			} else {
+				// Regular text-only message
+				msg.Content = m.Content
 			}
 
 			// Only add tool calls if they exist

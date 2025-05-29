@@ -42,6 +42,7 @@ type Message struct {
 	Name       string     `json:"name,omitempty"`
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string     `json:"tool_call_id,omitempty"`
+	ImageURLs  []string   `json:"image_urls,omitempty"`
 }
 
 // ToolCall represents a tool invocation request.

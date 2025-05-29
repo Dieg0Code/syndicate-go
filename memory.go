@@ -1,56 +1,130 @@
 package syndicate
 
 import (
+	"errors"
+	"fmt"
 	"sync"
 )
 
 // Memory defines the interface for managing a history of chat messages.
-// It provides methods for adding messages, retrieving the complete history, and clearing the history.
 type Memory interface {
-	// Add appends a complete ChatCompletionMessage to the memory.
+	// Add appends a message to the memory.
 	Add(message Message)
-	// Get returns a copy of all stored chat messages.
+	// Get returns all stored chat messages.
 	Get() []Message
-	// Clear removes all stored chat messages from memory.
-	Clear()
 }
 
-// SimpleMemory implements a basic in-memory storage for chat messages.
-// It uses a slice to store messages and a RWMutex for safe concurrent access.
-type SimpleMemory struct {
-	messages []Message    // Slice holding the chat messages.
-	mutex    sync.RWMutex // RWMutex to ensure thread-safe access to messages.
+// MemoryConfig holds the configuration for creating custom memory implementations
+type MemoryConfig struct {
+	addFunc func(message Message)
+	getFunc func() []Message
 }
 
-// Add appends a complete chat message to the SimpleMemory.
-func (s *SimpleMemory) Add(message Message) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	s.messages = append(s.messages, message)
-}
+// MemoryOption defines a function that configures a Memory implementation
+type MemoryOption func(*MemoryConfig) error
 
-// Clear removes all stored messages from the memory.
-func (s *SimpleMemory) Clear() {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	s.messages = make([]Message, 0)
-}
-
-// Get returns a copy of all stored chat messages to avoid data races.
-// A copy of the messages slice is returned to ensure that external modifications
-// do not affect the internal state.
-func (s *SimpleMemory) Get() []Message {
-	s.mutex.RLock()
-	defer s.mutex.RUnlock()
-	copyMessages := make([]Message, len(s.messages))
-	copy(copyMessages, s.messages)
-	return copyMessages
-}
-
-// NewSimpleMemory creates and returns a new instance of SimpleMemory.
-// It initializes the internal message slice and ensures the memory is ready for use.
-func NewSimpleMemory() Memory {
-	return &SimpleMemory{
-		messages: make([]Message, 0),
+// WithAddHandler sets the function to handle adding messages
+func WithAddHandler(addFunc func(message Message)) MemoryOption {
+	return func(config *MemoryConfig) error {
+		if addFunc == nil {
+			return errors.New("addFunc cannot be nil")
+		}
+		config.addFunc = addFunc
+		return nil
 	}
+}
+
+// WithGetHandler sets the function to handle retrieving messages
+func WithGetHandler(getFunc func() []Message) MemoryOption {
+	return func(config *MemoryConfig) error {
+		if getFunc == nil {
+			return errors.New("getFunc cannot be nil")
+		}
+		config.getFunc = getFunc
+		return nil
+	}
+}
+
+// customMemory implements Memory using provided functions
+type customMemory struct {
+	addFunc func(message Message)
+	getFunc func() []Message
+}
+
+func (c *customMemory) Add(message Message) {
+	if c.addFunc != nil {
+		c.addFunc(message)
+	}
+}
+
+func (c *customMemory) Get() []Message {
+	if c.getFunc != nil {
+		return c.getFunc()
+	}
+	return []Message{}
+}
+
+// NewMemory creates a custom Memory implementation using functional options.
+// Returns an error if required handlers are not provided.
+//
+// Example:
+//
+//	memory, err := syndicate.NewMemory(
+//	    syndicate.WithAddHandler(func(msg syndicate.Message) {
+//	        // Your custom add logic here
+//	    }),
+//	    syndicate.WithGetHandler(func() []syndicate.Message {
+//	        // Your custom get logic here
+//	        return messages
+//	    }),
+//	)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+func NewMemory(options ...MemoryOption) (Memory, error) {
+	config := &MemoryConfig{}
+
+	for _, option := range options {
+		if err := option(config); err != nil {
+			return nil, fmt.Errorf("failed to apply memory option: %w", err)
+		}
+	}
+
+	// Validate that both handlers are provided
+	if config.addFunc == nil {
+		return nil, errors.New("WithAddHandler is required when creating custom memory")
+	}
+	if config.getFunc == nil {
+		return nil, errors.New("WithGetHandler is required when creating custom memory")
+	}
+
+	return &customMemory{
+		addFunc: config.addFunc,
+		getFunc: config.getFunc,
+	}, nil
+}
+
+// NewSimpleMemory creates a basic in-memory storage for chat messages.
+// This function cannot fail, so it doesn't return an error.
+func NewSimpleMemory() Memory {
+	messages := make([]Message, 0)
+	var mutex sync.RWMutex
+
+	// We know these handlers are valid, so we can ignore the error
+	memory, _ := NewMemory(
+		WithAddHandler(func(message Message) {
+			mutex.Lock()
+			defer mutex.Unlock()
+			messages = append(messages, message)
+		}),
+		WithGetHandler(func() []Message {
+			mutex.RLock()
+			defer mutex.RUnlock()
+			copyMessages := make([]Message, len(messages))
+			copy(copyMessages, messages)
+			return copyMessages
+		}),
+	)
+
+	return memory
 }
