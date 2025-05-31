@@ -81,31 +81,27 @@ type OrderSchema struct {
     Address string   `json:"address" description:"Delivery address" required:"true"`
 }
 
-// Implement the Tool interface
-type OrderTool struct{}
-
-func (t *OrderTool) GetDefinition() syndicate.ToolDefinition {
-    schema, _ := syndicate.GenerateRawSchema(OrderSchema{})
-    return syndicate.ToolDefinition{
-        Name:        "ProcessOrder",
-        Description: "Process customer orders",
-        Parameters:  schema,
-    }
-}
-
-func (t *OrderTool) Execute(args json.RawMessage) (interface{}, error) {
-    var order OrderSchema
-    json.Unmarshal(args, &order)
-    // Process the order...
-    return "Order processed successfully", nil
-}
+// Create a tool with functional options
+tool, _ := syndicate.NewTool(
+    syndicate.WithToolName("ProcessOrder"),
+    syndicate.WithToolDescription("Process customer orders"),
+    syndicate.WithToolSchema(OrderSchema{}),
+    syndicate.WithToolExecuteHandler(func(args json.RawMessage) (interface{}, error) {
+        var order OrderSchema
+        if err := json.Unmarshal(args, &order); err != nil {
+            return nil, err
+        }
+        // Process the order...
+        return "Order processed successfully", nil
+    }),
+)
 
 // Create agent with tool
 agent, _ := syndicate.NewAgent(
     syndicate.WithClient(client),
     syndicate.WithName("OrderAgent"),
     syndicate.WithSystemPrompt("You process customer orders."),
-    syndicate.WithTools(&OrderTool{}),
+    syndicate.WithTools(tool),
     syndicate.WithMemory(syndicate.NewSimpleMemory()),
 )
 ```
@@ -183,7 +179,21 @@ agent, _ := syndicate.NewAgent(
 <details>
 <summary><b>Tool Integration</b></summary>
 
-Tools allow agents to interact with external systems. Implement the `Tool` interface:
+Tools allow agents to interact with external systems. You can create tools easily using the functional options pattern:
+
+```go
+tool, err := syndicate.NewTool(
+    syndicate.WithToolName("ToolName"),
+    syndicate.WithToolDescription("Tool description"),
+    syndicate.WithToolSchema(YourSchema{}),
+    syndicate.WithToolExecuteHandler(func(args json.RawMessage) (interface{}, error) {
+        // Your implementation here
+        return result, nil
+    }),
+)
+```
+
+Alternatively, you can implement the `Tool` interface directly:
 
 ```go
 type Tool interface {
@@ -216,16 +226,74 @@ type Memory interface {
 <details>
 <summary><b>Prompt Building</b></summary>
 
-Create structured prompts with the builder:
+Create structured prompts with the builder, now with comprehensive markdown support:
 
 ```go
 prompt := syndicate.NewPromptBuilder().
+    // Basic sections and text
     CreateSection("Role").
     AddText("Role", "You are a customer service agent.").
-    CreateSection("Guidelines").
-    AddListItem("Guidelines", "Be helpful and professional.").
-    AddListItem("Guidelines", "Always ask for clarification.").
+
+    // Formatting options
+    CreateSection("Instructions").
+    AddHeader("Instructions", "Important Guidelines", 2).
+    AddBoldText("Instructions", "Follow these rules carefully:").
+    AddBulletItem("Instructions", "Be helpful and professional").
+    AddBulletItem("Instructions", "Use clear, concise language").
+    AddListItem("Instructions", "Verify customer information first").
+    AddListItem("Instructions", "Solve the customer's problem").
+    AddBlockquote("Instructions", "Customer satisfaction is our priority").
+
+    // Code examples
+    CreateSection("Examples").
+    AddText("Examples", "Here's how to greet a customer:").
+    AddCodeBlock("Examples", `function greet(name) {
+    return "Hello " + name + ", how can I help you today?";
+}`, "javascript").
+
+    // Tables and links
+    CreateSection("Resources").
+    AddLink("Resources", "Customer Knowledge Base", "https://example.com/kb").
+    AddHorizontalRule("Resources").
+    AddTable("Resources",
+        []string{"Resource Type", "URL", "Description"},
+        [][]string{
+            {"FAQ", "https://example.com/faq", "Frequently asked questions"},
+            {"Policy", "https://example.com/policy", "Company policies"},
+        }).
+
     Build()
+```
+
+The PromptBuilder combines XML-style hierarchical structure with markdown formatting for optimal LLM prompting.
+
+Basic table example:
+
+```go
+// Basic table example
+pb := syndicate.NewPromptBuilder().
+    CreateSection("Tables").
+    AddText("Tables", "Here's a simple table:").
+    AddTable("Tables",
+        []string{"Name", "Age", "Role"},  // Headers
+        [][]string{                        // Rows
+            {"John", "30", "Developer"},
+            {"Jane", "28", "Designer"},
+            {"Bob", "35", "Manager"},
+        })
+```
+
+This produces a markdown table like:
+
+```
+<Tables>
+Here's a simple table:
+| Name | Age | Role |
+| --- | --- | --- |
+| John | 30 | Developer |
+| Jane | 28 | Designer |
+| Bob | 35 | Manager |
+</Tables>
 ```
 
 </details>
